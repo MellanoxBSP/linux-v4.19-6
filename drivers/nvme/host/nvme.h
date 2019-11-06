@@ -192,6 +192,8 @@ struct nvme_ctrl {
 	u16 kas;
 	u8 npss;
 	u8 apsta;
+	u16 wctemp;
+	u16 cctemp;
 	u32 oaes;
 	u32 aen_result;
 	unsigned int shutdown_timeout;
@@ -590,5 +592,11 @@ static inline struct nvme_ns *nvme_get_ns_from_dev(struct device *dev)
 
 int __init nvme_core_init(void);
 void nvme_core_exit(void);
+
+#ifdef CONFIG_NVME_HWMON
+void nvme_hwmon_init(struct nvme_ctrl *ctrl);
+#else
+static inline void nvme_hwmon_init(struct nvme_ctrl *ctrl) { }
+#endif
 
 #endif /* _NVME_H */

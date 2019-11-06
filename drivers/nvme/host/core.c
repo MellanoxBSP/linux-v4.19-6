@@ -2432,6 +2432,9 @@ int nvme_init_identify(struct nvme_ctrl *ctrl)
 	ctrl->oacs = le16_to_cpu(id->oacs);
 	ctrl->oncs = le16_to_cpup(&id->oncs);
 	ctrl->oaes = le32_to_cpu(id->oaes);
+	ctrl->wctemp = le16_to_cpu(id->wctemp);
+	ctrl->cctemp = le16_to_cpu(id->cctemp);
+
 	atomic_set(&ctrl->abort_limit, id->acl + 1);
 	ctrl->vwc = id->vwc;
 	ctrl->cntlid = le16_to_cpup(&id->cntlid);
@@ -2527,6 +2530,9 @@ int nvme_init_identify(struct nvme_ctrl *ctrl)
 	ret = nvme_configure_directives(ctrl);
 	if (ret < 0)
 		return ret;
+
+	if (!ctrl->identified)
+		nvme_hwmon_init(ctrl);
 
 	ctrl->identified = true;
 
