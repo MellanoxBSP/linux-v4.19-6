@@ -121,6 +121,16 @@ mlxreg_hotplug_udev_event_send(struct kobject *kobj,
 	return kobject_uevent_env(kobj, KOBJ_CHANGE, mlxreg_hotplug_udev_envp);
 }
 
+static void
+mlxreg_hotplug_pdata_export(void *pdata, void *regmap, int irq)
+{
+	struct mlxreg_core_hotplug_platform_data *dev_pdata = pdata;
+
+	/* Export regmap and irq to underlying device. */
+	dev_pdata->regmap = regmap;
+	dev_pdata->irq = irq;
+}
+
 static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 					struct mlxreg_core_data *data)
 {
@@ -144,6 +154,9 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 			data->hpdev.nr + pdata->shift_nr);
 		return -EFAULT;
 	}
+	if (data->hpdev.brdinfo->platform_data)
+		mlxreg_hotplug_pdata_export(data->hpdev.brdinfo->platform_data,
+					    pdata->regmap, priv->irq);
 
 	data->hpdev.client = i2c_new_device(data->hpdev.adapter,
 					    data->hpdev.brdinfo);
