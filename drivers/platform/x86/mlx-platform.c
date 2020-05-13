@@ -1088,6 +1088,210 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_asic_items_data[] = {
 	},
 };
 
+static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_prsnt_items_data[] = {
+	{
+		.label = "lc1_prsnt",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = BIT(0),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc2_prsnt",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = BIT(1),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc3_prsnt",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = BIT(2),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc4_prsnt",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = BIT(3),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc5_prsnt",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = BIT(4),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc6_prsnt",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = BIT(5),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc7_prsnt",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = BIT(6),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc8_prsnt",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = BIT(7),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+};
+
+static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_verify_items_data[] = {
+	{
+		.label = "lc1_verified",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = BIT(0),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc2_verified",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = BIT(1),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc3_verified",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = BIT(2),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc4_verified",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = BIT(3),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc5_verified",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = BIT(4),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc6_verified",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = BIT(5),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc7_verified",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = BIT(6),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc8_verified",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = BIT(7),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+};
+
+static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_pg_data[] = {
+	{
+		.label = "lc1_powered",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = BIT(0),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc2_powered",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = BIT(1),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc3_powered",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = BIT(2),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc4_powered",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = BIT(3),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc5_powered",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = BIT(4),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc6_powered",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = BIT(5),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc7_powered",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = BIT(6),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc8_powered",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = BIT(7),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+};
+
+static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_secure_data[] = {
+	{
+		.label = "lc1_secured",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = BIT(0),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc2_secured",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = BIT(1),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc3_secured",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = BIT(2),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc4_secured",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = BIT(3),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc5_secured",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = BIT(4),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc6_secured",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = BIT(5),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc7_secured",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = BIT(6),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+	{
+		.label = "lc8_secured",
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = BIT(7),
+		.hpdev.nr = MLXPLAT_CPLD_NR_NONE,
+	},
+};
+
 static struct mlxreg_core_item mlxplat_mlxcpld_modular_items[] = {
 	{
 		.data = mlxplat_mlxcpld_ext_psu_items_data,
@@ -1126,6 +1330,46 @@ static struct mlxreg_core_item mlxplat_mlxcpld_modular_items[] = {
 		.count = ARRAY_SIZE(mlxplat_mlxcpld_modular_asic_items_data),
 		.inversed = 0,
 		.health = true,
+	},
+	{
+		.data = mlxplat_mlxcpld_modular_lc_prsnt_items_data,
+		.kind = MLXREG_HOTPLUG_DEVICE_LC_PRSNT,
+		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_IN_OFFSET,
+		.mask = MLXPLAT_CPLD_LPC_FWOK_MASK,
+		.count = ARRAY_SIZE(mlxplat_mlxcpld_modular_lc_prsnt_items_data),
+		.inversed = 0,
+		.health = false,
+	},
+	{
+		.data = mlxplat_mlxcpld_modular_lc_verify_items_data,
+		.kind = MLXREG_HOTPLUG_DEVICE_LC_VERIFIED,
+		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_VR_OFFSET,
+		.mask = MLXPLAT_CPLD_LPC_FWOK_MASK,
+		.count = ARRAY_SIZE(mlxplat_mlxcpld_modular_lc_verify_items_data),
+		.inversed = 0,
+		.health = false,
+	},
+	{
+		.data = mlxplat_mlxcpld_modular_lc_pg_data,
+		.kind = MLXREG_HOTPLUG_DEVICE_LC_PWR,
+		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_PG_OFFSET,
+		.mask = MLXPLAT_CPLD_LPC_FWOK_MASK,
+		.count = ARRAY_SIZE(mlxplat_mlxcpld_modular_lc_pg_data),
+		.inversed = 0,
+		.health = false,
+	},
+	{
+		.data = mlxplat_mlxcpld_modular_lc_secure_data,
+		.kind = MLXREG_HOTPLUG_DEVICE_LC_SECURED,
+		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
+		.reg = MLXPLAT_CPLD_LPC_REG_LC_SC_OFFSET,
+		.mask = MLXPLAT_CPLD_LPC_FWOK_MASK,
+		.count = ARRAY_SIZE(mlxplat_mlxcpld_modular_lc_secure_data),
+		.inversed = 0,
+		.health = false,
 	},
 };
 
