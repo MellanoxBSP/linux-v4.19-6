@@ -179,4 +179,28 @@ struct mlxreg_core_hotplug_platform_data {
 	int shift_nr;
 };
 
+/**
+ * struct mlxplat_notifier_info - platform data notifier info:
+ *
+ * @handle: handle of device, for which event has been generated;
+ * @label: label of attribute, associated with event;
+ * @slot: device location;
+ * @topo_id: device topology id;
+ * @action: true - action is on, false is off;
+ */
+struct mlxplat_notifier_info {
+	void *handle;
+	char label[MLXREG_CORE_LABEL_MAX_SIZE];
+	int slot;
+	u32 topo_id;
+	u8 action;
+};
+
+int mlxplat_blk_notifiers_call_chain(unsigned long val,
+				     struct mlxplat_notifier_info *info);
+
+int mlxplat_blk_notifier_register(struct notifier_block *nb);
+
+int mlxplat_blk_notifier_unregister(struct notifier_block *nb);
+
 #endif /* __LINUX_PLATFORM_DATA_MLXREG_H */

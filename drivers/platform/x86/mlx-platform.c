@@ -231,6 +231,51 @@ struct mlxplat_priv {
 	void *regmap;
 };
 
+static BLOCKING_NOTIFIER_HEAD(mlxplat_blk_notif_chain);
+
+/**
+ *	mlx_plat_blk_notifiers_call_chain - Call blocking notifiers
+ *	@val: value passed unmodified to notifier function
+ *	@info: notifier information data
+ *
+ *	Call platform blocking notifier blocks.
+ */
+int mlxplat_blk_notifiers_call_chain(unsigned long val,
+				     struct mlxplat_notifier_info *info)
+{
+	return blocking_notifier_call_chain(&mlxplat_blk_notif_chain,
+					    val, info);
+}
+EXPORT_SYMBOL_GPL(mlxplat_blk_notifiers_call_chain);
+
+/**
+ *	mlx_plat_blk_notifier_register - Register blk notifier
+ *	@nb: notifier_block
+ *
+ *	Register platfrorm events notifier.
+ */
+int mlxplat_blk_notifier_register(struct notifier_block *nb)
+{
+	struct blocking_notifier_head *chain = &mlxplat_blk_notif_chain;
+
+	return blocking_notifier_chain_register(chain, nb);
+}
+EXPORT_SYMBOL_GPL(mlxplat_blk_notifier_register);
+
+/**
+ *	mlxplat_blk_notifier_unregister - Unregister blocking notifier
+ *	@nb: notifier_block
+ *
+ *	Unregister platfrorm events blocking notifier.
+ */
+int mlxplat_blk_notifier_unregister(struct notifier_block *nb)
+{
+	struct blocking_notifier_head *chain = &mlxplat_blk_notif_chain;
+
+	return blocking_notifier_chain_unregister(chain, nb);
+}
+EXPORT_SYMBOL_GPL(mlxplat_blk_notifier_unregister);
+
 /* Regions for LPC I2C controller and LPC base register space */
 static const struct resource mlxplat_lpc_resources[] = {
 	[0] = DEFINE_RES_NAMED(MLXPLAT_CPLD_LPC_I2C_BASE_ADRR,
