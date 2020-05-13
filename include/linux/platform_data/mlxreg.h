@@ -49,6 +49,15 @@ enum mlxreg_wdt_type {
 	MLX_WDT_TYPE2,
 };
 
+enum mlxreg_hotplug_kind {
+	MLXREG_HOTPLUG_DEVICE_NA = 0,
+	MLXREG_HOTPLUG_DEVICE_LC_VERIFIED = 1,
+	MLXREG_HOTPLUG_DEVICE_LC_SECURED = 2,
+	MLXREG_HOTPLUG_DEVICE_LC_PRSNT = 3,
+	MLXREG_HOTPLUG_DEVICE_LC_PWR = 4,
+	MLXREG_HOTPLUG_DEVICE_PWR = 5,
+};
+
 /**
  * struct mlxreg_hotplug_device - I2C device data:
  *
@@ -112,6 +121,7 @@ struct mlxreg_core_data {
  */
 struct mlxreg_core_item {
 	struct mlxreg_core_data *data;
+	enum mlxreg_hotplug_kind kind;
 	u32 aggr_mask;
 	u32 reg;
 	u32 mask;
