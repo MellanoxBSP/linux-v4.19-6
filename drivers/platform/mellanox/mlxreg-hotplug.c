@@ -56,6 +56,7 @@
 
 #define MLXREG_HOTPLUG_ATTRS_MAX	24
 #define MLXREG_HOTPLUG_NOT_ASSERT	3
+#define MLXREG_HOTPLUG_SHIFT_NR		16
 
 /**
  * struct mlxreg_hotplug_priv_data - platform private data:
@@ -131,8 +132,28 @@ mlxreg_hotplug_pdata_export(void *pdata, void *regmap, int irq)
 	dev_pdata->irq = irq;
 }
 
+static void
+mlxreg_hotplug_notify(struct mlxreg_hotplug_priv_data *priv,
+		      struct mlxreg_core_data *data,
+		      enum mlxreg_hotplug_kind kind, int id, bool act)
+{
+	struct mlxreg_core_hotplug_platform_data *pdata;
+	struct mlxplat_notifier_info info;
+
+	pdata = dev_get_platdata(&priv->pdev->dev);
+	info.handle = data->hpdev.adapter;
+	info.slot = id;
+	info.action = act;
+	strncpy(info.label, data->label, sizeof(data->label));
+	info.topo_id = rol32(data->hpdev.nr + pdata->shift_nr,
+			     MLXREG_HOTPLUG_SHIFT_NR) |
+			     data->hpdev.brdinfo->addr;
+	mlxplat_blk_notifiers_call_chain(kind, &info);
+}
+
 static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
-					struct mlxreg_core_data *data)
+					struct mlxreg_core_data *data,
+					enum mlxreg_hotplug_kind kind, int id)
 {
 	struct mlxreg_core_hotplug_platform_data *pdata;
 
@@ -170,12 +191,23 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 		return -EFAULT;
 	}
 
+	switch (kind) {
+	case MLXREG_HOTPLUG_DEVICE_LC_VERIFIED:
+	case MLXREG_HOTPLUG_DEVICE_LC_SECURED:
+	case MLXREG_HOTPLUG_DEVICE_PWR:
+		mlxreg_hotplug_notify(priv, data, kind, id, 1);
+		break;
+	default:
+		break;
+	}
+
 	return 0;
 }
 
 static void
 mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
-			      struct mlxreg_core_data *data)
+			      struct mlxreg_core_data *data,
+			      enum mlxreg_hotplug_kind kind, int id)
 {
 	/* Notify user by sending hwmon uevent. */
 	mlxreg_hotplug_udev_event_send(&priv->hwmon->kobj, data, false);
@@ -188,6 +220,16 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 	if (data->hpdev.adapter) {
 		i2c_put_adapter(data->hpdev.adapter);
 		data->hpdev.adapter = NULL;
+	}
+
+	switch (kind) {
+	case MLXREG_HOTPLUG_DEVICE_LC_PWR:
+	case MLXREG_HOTPLUG_DEVICE_LC_PRSNT:
+	case MLXREG_HOTPLUG_DEVICE_PWR:
+		mlxreg_hotplug_notify(priv, data, kind, id, 0);
+		break;
+	default:
+		break;
 	}
 }
 
@@ -355,14 +397,18 @@ mlxreg_hotplug_work_helper(struct mlxreg_hotplug_priv_data *priv,
 		data = item->data + bit;
 		if (regval & BIT(bit)) {
 			if (item->inversed)
-				mlxreg_hotplug_device_destroy(priv, data);
+				mlxreg_hotplug_device_destroy(priv, data,
+							      item->kind, bit);
 			else
-				mlxreg_hotplug_device_create(priv, data);
+				mlxreg_hotplug_device_create(priv, data,
+							     item->kind, bit);
 		} else {
 			if (item->inversed)
-				mlxreg_hotplug_device_create(priv, data);
+				mlxreg_hotplug_device_create(priv, data,
+							     item->kind, bit);
 			else
-				mlxreg_hotplug_device_destroy(priv, data);
+				mlxreg_hotplug_device_destroy(priv, data,
+							      item->kind, bit);
 		}
 	}
 
@@ -419,7 +465,8 @@ mlxreg_hotplug_health_work_helper(struct mlxreg_hotplug_priv_data *priv,
 				 * ASIC is in steady state. Connect associated
 				 * device, if configured.
 				 */
-				mlxreg_hotplug_device_create(priv, data);
+				mlxreg_hotplug_device_create(priv, data,
+							     item->kind, i);
 				data->attached = true;
 			}
 		} else {
@@ -429,7 +476,8 @@ mlxreg_hotplug_health_work_helper(struct mlxreg_hotplug_priv_data *priv,
 				 * in steady state. Disconnect associated
 				 * device, if it has been connected.
 				 */
-				mlxreg_hotplug_device_destroy(priv, data);
+				mlxreg_hotplug_device_destroy(priv, data,
+							      item->kind, i);
 				data->attached = false;
 				data->health_cntr = 0;
 			}
@@ -668,7 +716,8 @@ static void mlxreg_hotplug_unset_irq(struct mlxreg_hotplug_priv_data *priv)
 		/* Remove all the attached devices in group. */
 		count = item->count;
 		for (j = 0; j < count; j++, data++)
-			mlxreg_hotplug_device_destroy(priv, data);
+			mlxreg_hotplug_device_destroy(priv, data, item->kind,
+						      i);
 	}
 }
 
