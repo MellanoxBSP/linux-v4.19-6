@@ -14,6 +14,7 @@
 #include "core.h"
 #include "core_env.h"
 #include "i2c.h"
+#include "platform.h"
 
 static const char mlxsw_m_driver_name[] = "mlxsw_minimal";
 
@@ -29,6 +30,7 @@ struct mlxsw_m {
 	const struct mlxsw_bus_info *bus_info;
 	u8 base_mac[ETH_ALEN];
 	u8 max_ports;
+	struct mlxsw_plat *plat;
 };
 
 struct mlxsw_m_port {
@@ -288,6 +290,13 @@ static int mlxsw_m_init(struct mlxsw_core *mlxsw_core,
 		return err;
 	}
 
+	if (mlxsw_m->bus_info->dev->platform_data) {
+		err = mlxsw_plat_init(mlxsw_core, mlxsw_bus_info,
+				      &mlxsw_m->plat);
+		if (err)
+			return err;
+	}
+
 	return 0;
 }
 
@@ -295,6 +304,8 @@ static void mlxsw_m_fini(struct mlxsw_core *mlxsw_core)
 {
 	struct mlxsw_m *mlxsw_m = mlxsw_core_driver_priv(mlxsw_core);
 
+	if (mlxsw_m->plat)
+		mlxsw_plat_fini(mlxsw_m->plat);
 	mlxsw_m_ports_remove(mlxsw_m);
 }
 

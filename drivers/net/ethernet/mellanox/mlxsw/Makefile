@@ -32,4 +32,4 @@ mlxsw_spectrum-objs		:= spectrum.o spectrum_buffers.o \
 mlxsw_spectrum-$(CONFIG_MLXSW_SPECTRUM_DCB)	+= spectrum_dcb.o
 mlxsw_spectrum-$(CONFIG_NET_DEVLINK) += spectrum_dpipe.o
 obj-$(CONFIG_MLXSW_MINIMAL)	+= mlxsw_minimal.o
-mlxsw_minimal-objs		:= minimal.o
+mlxsw_minimal-objs		:= minimal.o platform.o
