@@ -134,13 +134,12 @@ mlxreg_hotplug_pdata_export(void *pdata, void *regmap, int irq)
 
 static void
 mlxreg_hotplug_notify(struct mlxreg_hotplug_priv_data *priv,
+		      struct mlxreg_core_hotplug_platform_data *pdata,
 		      struct mlxreg_core_data *data,
 		      enum mlxreg_hotplug_kind kind, int id, bool act)
 {
-	struct mlxreg_core_hotplug_platform_data *pdata;
 	struct mlxplat_notifier_info info;
 
-	pdata = dev_get_platdata(&priv->pdev->dev);
 	info.handle = data->hpdev.adapter;
 	info.slot = id;
 	info.action = act;
@@ -155,6 +154,7 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 					struct mlxreg_core_data *data,
 					enum mlxreg_hotplug_kind kind, int id)
 {
+	struct i2c_board_info *brdinfo = data->hpdev.brdinfo;
 	struct mlxreg_core_hotplug_platform_data *pdata;
 
 	/* Notify user by sending hwmon uevent. */
@@ -168,34 +168,40 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 		return 0;
 
 	pdata = dev_get_platdata(&priv->pdev->dev);
-	data->hpdev.adapter = i2c_get_adapter(data->hpdev.nr +
-					      pdata->shift_nr);
-	if (!data->hpdev.adapter) {
-		dev_err(priv->dev, "Failed to get adapter for bus %d\n",
-			data->hpdev.nr + pdata->shift_nr);
-		return -EFAULT;
-	}
-	if (data->hpdev.brdinfo->platform_data)
-		mlxreg_hotplug_pdata_export(data->hpdev.brdinfo->platform_data,
-					    pdata->regmap, priv->irq);
+	switch (data->hpdev.action) {
+	case MLXREG_HOTPLUG_DEVICE_PRB_REM:
+	case MLXREG_HOTPLUG_DEVICE_PRB_ONLY:
+		data->hpdev.adapter = i2c_get_adapter(data->hpdev.nr +
+						      pdata->shift_nr);
+		if (!data->hpdev.adapter) {
+			dev_err(priv->dev, "Failed to get adapter for bus %d\n",
+				data->hpdev.nr + pdata->shift_nr);
+			return -EFAULT;
+		}
+		if (brdinfo->platform_data)
+			mlxreg_hotplug_pdata_export(brdinfo->platform_data,
+						    pdata->regmap, priv->irq);
 
-	data->hpdev.client = i2c_new_device(data->hpdev.adapter,
-					    data->hpdev.brdinfo);
-	if (!data->hpdev.client) {
-		dev_err(priv->dev, "Failed to create client %s at bus %d at addr 0x%02x\n",
-			data->hpdev.brdinfo->type, data->hpdev.nr +
-			pdata->shift_nr, data->hpdev.brdinfo->addr);
+		data->hpdev.client = i2c_new_device(data->hpdev.adapter,
+						    brdinfo);
+		if (!data->hpdev.client) {
+			dev_err(priv->dev, "Failed to create client %s at bus %d at addr 0x%02x\n",
+				brdinfo->type, data->hpdev.nr +
+				pdata->shift_nr, brdinfo->addr);
 
-		i2c_put_adapter(data->hpdev.adapter);
-		data->hpdev.adapter = NULL;
-		return -EFAULT;
+			i2c_put_adapter(data->hpdev.adapter);
+			data->hpdev.adapter = NULL;
+			return -EFAULT;
+		}
+	default:
+		break;
 	}
 
 	switch (kind) {
-	case MLXREG_HOTPLUG_DEVICE_LC_VERIFIED:
-	case MLXREG_HOTPLUG_DEVICE_LC_SECURED:
-	case MLXREG_HOTPLUG_DEVICE_PWR:
-		mlxreg_hotplug_notify(priv, data, kind, id, 1);
+	case MLXREG_HOTPLUG_LC_VERIFIED:
+	case MLXREG_HOTPLUG_LC_SECURED:
+	case MLXREG_HOTPLUG_PWR:
+		mlxreg_hotplug_notify(priv, pdata, data, kind, id, 1);
 		break;
 	default:
 		break;
@@ -209,24 +215,34 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 			      struct mlxreg_core_data *data,
 			      enum mlxreg_hotplug_kind kind, int id)
 {
+	struct mlxreg_core_hotplug_platform_data *pdata;
+
 	/* Notify user by sending hwmon uevent. */
 	mlxreg_hotplug_udev_event_send(&priv->hwmon->kobj, data, false);
 
-	if (data->hpdev.client) {
-		i2c_unregister_device(data->hpdev.client);
-		data->hpdev.client = NULL;
-	}
+	switch (data->hpdev.action) {
+	case MLXREG_HOTPLUG_DEVICE_PRB_REM:
+	case MLXREG_HOTPLUG_DEVICE_REM_ONLY:
+		if (data->hpdev.client) {
+			i2c_unregister_device(data->hpdev.client);
+			data->hpdev.client = NULL;
+		}
 
-	if (data->hpdev.adapter) {
-		i2c_put_adapter(data->hpdev.adapter);
-		data->hpdev.adapter = NULL;
+		if (data->hpdev.adapter) {
+			i2c_put_adapter(data->hpdev.adapter);
+			data->hpdev.adapter = NULL;
+		}
+		break;
+	default:
+		break;
 	}
 
 	switch (kind) {
-	case MLXREG_HOTPLUG_DEVICE_LC_PWR:
-	case MLXREG_HOTPLUG_DEVICE_LC_PRSNT:
-	case MLXREG_HOTPLUG_DEVICE_PWR:
-		mlxreg_hotplug_notify(priv, data, kind, id, 0);
+	case MLXREG_HOTPLUG_LC_PWR:
+	case MLXREG_HOTPLUG_LC_PRSNT:
+	case MLXREG_HOTPLUG_PWR:
+		pdata = dev_get_platdata(&priv->pdev->dev);
+		mlxreg_hotplug_notify(priv, pdata, data, kind, id, 0);
 		break;
 	default:
 		break;
