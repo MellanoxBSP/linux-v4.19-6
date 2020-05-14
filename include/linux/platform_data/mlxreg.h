@@ -49,13 +49,39 @@ enum mlxreg_wdt_type {
 	MLX_WDT_TYPE2,
 };
 
+/**
+ * enum mlxreg_hotplug_kind - kind of hotplug entry
+ *
+ * @MLXREG_HOTPLUG_DEVICE_NA: do not care;
+ * @MLXREG_HOTPLUG_LC_VERIFIED: entry for line card verification events;
+ * @MLXREG_HOTPLUG_LC_SECURED: entry for line card security events;
+ * @MLXREG_HOTPLUG_LC_PRSNT: entry for line card presence events;
+ * @MLXREG_HOTPLUG_LC_PWR: entry for line card power events;
+ * @MLXREG_HOTPLUG_PWR: entry for power controller events;
+ */
 enum mlxreg_hotplug_kind {
 	MLXREG_HOTPLUG_DEVICE_NA = 0,
-	MLXREG_HOTPLUG_DEVICE_LC_VERIFIED = 1,
-	MLXREG_HOTPLUG_DEVICE_LC_SECURED = 2,
-	MLXREG_HOTPLUG_DEVICE_LC_PRSNT = 3,
-	MLXREG_HOTPLUG_DEVICE_LC_PWR = 4,
-	MLXREG_HOTPLUG_DEVICE_PWR = 5,
+	MLXREG_HOTPLUG_LC_VERIFIED = 1,
+	MLXREG_HOTPLUG_LC_SECURED = 2,
+	MLXREG_HOTPLUG_LC_PRSNT = 3,
+	MLXREG_HOTPLUG_LC_PWR = 4,
+	MLXREG_HOTPLUG_PWR = 5,
+};
+
+/**
+ * enum mlxreg_hotplug_device_action - hotplug device action required for
+ *				       driver's connectivity
+ *
+ * @MLXREG_HOTPLUG_DEVICE_PRB_REM: probe device for on event remove for off;
+ * @MLXREG_HOTPLUG_DEVICE_PRB_ONLY: probe device for on event, do not remove;
+ * @MLXREG_HOTPLUG_DEVICE_REM_ONLY: remove device for off event, do not probe;
+ * @MLXREG_HOTPLUG_DEVICE_NO_ACTION: no connectivity action is required;
+ */
+enum mlxreg_hotplug_device_action {
+	MLXREG_HOTPLUG_DEVICE_PRB_REM = 0,
+	MLXREG_HOTPLUG_DEVICE_PRB_ONLY = 1,
+	MLXREG_HOTPLUG_DEVICE_REM_ONLY = 2,
+	MLXREG_HOTPLUG_DEVICE_NO_ACTION = 3,
 };
 
 /**
@@ -65,6 +91,7 @@ enum mlxreg_hotplug_kind {
  * @client: I2C device client;
  * @brdinfo: device board information;
  * @nr: I2C device adapter number, to which device is to be attached;
+ * @no_probed: do not probe device if set non zero;
  *
  * Structure represents I2C hotplug device static data (board topology) and
  * dynamic data (related kernel objects handles).
@@ -74,6 +101,7 @@ struct mlxreg_hotplug_device {
 	struct i2c_client *client;
 	struct i2c_board_info *brdinfo;
 	int nr;
+	enum mlxreg_hotplug_device_action action;
 };
 
 /**
