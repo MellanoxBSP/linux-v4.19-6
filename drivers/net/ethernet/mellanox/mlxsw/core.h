@@ -186,6 +186,8 @@ bool mlxsw_core_schedule_work(struct work_struct *work);
 void mlxsw_core_flush_owq(void);
 int mlxsw_core_resources_query(struct mlxsw_core *mlxsw_core, char *mbox,
 			       struct mlxsw_res *res);
+int mlxsw_core_lc_init(struct mlxsw_core *mlxsw_core, int slot);
+void mlxsw_core_lc_fini(struct mlxsw_core *mlxsw_core, int slot);
 
 #define MLXSW_CONFIG_PROFILE_SWID_COUNT 8
 
@@ -288,6 +290,8 @@ struct mlxsw_driver {
 			     u64 *p_linear_size);
 	int (*params_register)(struct mlxsw_core *mlxsw_core);
 	void (*params_unregister)(struct mlxsw_core *mlxsw_core);
+	int (*lc_init)(struct mlxsw_core *mlxsw_core, int slot);
+	void (*lc_fini)(struct mlxsw_core *mlxsw_core, int slot);
 	u8 txhdr_len;
 	const struct mlxsw_config_profile *profile;
 	bool res_query_enabled;
@@ -359,6 +363,8 @@ int mlxsw_hwmon_init(struct mlxsw_core *mlxsw_core,
 		     const struct mlxsw_bus_info *mlxsw_bus_info,
 		     struct mlxsw_hwmon **p_hwmon);
 void mlxsw_hwmon_fini(struct mlxsw_hwmon *mlxsw_hwmon);
+int mlxsw_hwmon_lc_init(struct mlxsw_hwmon *mlxsw_hwmon, int slot);
+void mlxsw_hwmon_lc_fini(struct mlxsw_hwmon *mlxsw_hwmon, int slot);
 
 #else
 
@@ -373,6 +379,16 @@ static inline void mlxsw_hwmon_fini(struct mlxsw_hwmon *mlxsw_hwmon)
 {
 }
 
+static inline int mlxsw_hwmon_lc_init(struct mlxsw_hwmon *mlxsw_hwmon,
+				      int slot)
+{
+}
+
+static inline void mlxsw_hwmon_lc_fini(struct mlxsw_hwmon *mlxsw_hwmon,
+				       int slot)
+{
+}
+
 #endif
 
 struct mlxsw_thermal;
@@ -383,6 +399,8 @@ int mlxsw_thermal_init(struct mlxsw_core *mlxsw_core,
 		       const struct mlxsw_bus_info *mlxsw_bus_info,
 		       struct mlxsw_thermal **p_thermal);
 void mlxsw_thermal_fini(struct mlxsw_thermal *thermal);
+int mlxsw_thermal_lc_init(struct mlxsw_thermal *mlxsw_thermal, int slot);
+void mlxsw_thermal_lc_fini(struct mlxsw_thermal *mlxsw_thermal, int slot);
 
 #else
 
@@ -394,6 +412,16 @@ static inline int mlxsw_thermal_init(struct mlxsw_core *mlxsw_core,
 }
 
 static inline void mlxsw_thermal_fini(struct mlxsw_thermal *thermal)
+{
+}
+
+static inline int mlxsw_thermal_lc_init(struct mlxsw_thermal *mlxsw_thermal,
+				      int slot)
+{
+}
+
+static inline void mlxsw_thermal_lc_fini(struct mlxsw_thermal *mlxsw_thermal,
+				         int slot)
 {
 }
 

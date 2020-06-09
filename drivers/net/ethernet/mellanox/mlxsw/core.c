@@ -1935,6 +1935,48 @@ int mlxsw_core_resources_query(struct mlxsw_core *mlxsw_core, char *mbox,
 }
 EXPORT_SYMBOL(mlxsw_core_resources_query);
 
+int mlxsw_core_lc_init(struct mlxsw_core *mlxsw_core, int slot)
+{
+	int err;
+
+	if (mlxsw_core->driver->lc_init) {
+		err = mlxsw_core->driver->lc_init(mlxsw_core, slot);
+		if (err)
+			return err;
+	}
+
+
+	if (mlxsw_core->hwmon) {
+		err = mlxsw_hwmon_lc_init(mlxsw_core->hwmon, slot);
+		if (err)
+			goto err_hwmon_lc_init;
+	}
+
+	if (mlxsw_core->thermal) {
+		err = mlxsw_thermal_lc_init(mlxsw_core->thermal, slot);
+		if (err)
+			goto err_thermal_lc_init;
+	}
+
+err_thermal_lc_init:
+	if (mlxsw_core->hwmon)
+		mlxsw_hwmon_lc_fini(mlxsw_core->hwmon, slot);
+err_hwmon_lc_init:
+	mlxsw_core->driver->lc_fini(mlxsw_core, slot);
+
+	return err;
+}
+
+void mlxsw_core_lc_fini(struct mlxsw_core *mlxsw_core, int slot)
+{
+	if (mlxsw_core->thermal)
+		mlxsw_thermal_lc_fini(mlxsw_core->thermal, slot);
+	if (mlxsw_core->hwmon)
+		mlxsw_hwmon_fini(mlxsw_core->hwmon);
+	if (mlxsw_core->driver->lc_fini)
+		mlxsw_core->driver->lc_fini(mlxsw_core, slot);
+}
+
 static int __init mlxsw_core_module_init(void)
 {
 	int err;
