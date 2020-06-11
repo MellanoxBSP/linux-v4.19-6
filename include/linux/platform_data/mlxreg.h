@@ -72,9 +72,9 @@ enum mlxreg_hotplug_kind {
  * enum mlxreg_hotplug_device_action - hotplug device action required for
  *				       driver's connectivity
  *
- * @MLXREG_HOTPLUG_DEVICE_PRB_REM: probe device for on event remove for off;
- * @MLXREG_HOTPLUG_DEVICE_PRB_ONLY: probe device for on event, do not remove;
- * @MLXREG_HOTPLUG_DEVICE_REM_ONLY: remove device for off event, do not probe;
+ * @MLXREG_HOTPLUG_DEVICE_PRB_REM: probe device for 'on' event remove for 'off' event;
+ * @MLXREG_HOTPLUG_DEVICE_PRB_ONLY: probe device for 'on' event, do not remove;
+ * @MLXREG_HOTPLUG_DEVICE_REM_ONLY: remove device for 'off' event, do not probe;
  * @MLXREG_HOTPLUG_DEVICE_NO_ACTION: no connectivity action is required;
  */
 enum mlxreg_hotplug_device_action {
