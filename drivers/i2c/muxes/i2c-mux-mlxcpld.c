@@ -72,7 +72,7 @@ static int mlxcpld_mux_reg_write(struct i2c_adapter *adap,
 
 	return __i2c_smbus_xfer(adap, client->addr, client->flags,
 				I2C_SMBUS_WRITE, pdata->sel_reg_addr,
-				I2C_SMBUS_BYTE_DATA, &data);
+				pdata->reg_size, &data);
 }
 
 static int mlxcpld_mux_select_chan(struct i2c_mux_core *muxc, u32 chan)
@@ -111,12 +111,25 @@ static int mlxcpld_mux_probe(struct i2c_client *client,
 	struct i2c_mux_core *muxc;
 	int num, force;
 	struct mlxcpld_mux *data;
+	u32 func;
 	int err;
 
 	if (!pdata)
 		return -EINVAL;
 
-	if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_WRITE_BYTE_DATA))
+	pdata->reg_size = pdata->reg_size ? pdata->reg_size : I2C_FUNC_SMBUS_WRITE_BYTE_DATA;
+	switch (pdata->reg_size) {
+	case I2C_SMBUS_WORD_DATA:
+		func = I2C_FUNC_SMBUS_WRITE_WORD_DATA;
+		break;
+	case I2C_SMBUS_BYTE_DATA:
+		func = I2C_FUNC_SMBUS_WRITE_BYTE_DATA;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (!i2c_check_functionality(adap, func))
 		return -ENODEV;
 
 	muxc = i2c_mux_alloc(adap, &client->dev, CPLD_MUX_MAX_NCHANS,
