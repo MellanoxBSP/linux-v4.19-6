@@ -16,8 +16,6 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
-#define CPLD_MUX_MAX_NCHANS	8
-
 /* mlxcpld_mux - mux control structure:
  * @last_chan - last register value
  * @client - I2C device client
@@ -132,7 +130,7 @@ static int mlxcpld_mux_probe(struct i2c_client *client,
 	if (!i2c_check_functionality(adap, func))
 		return -ENODEV;
 
-	muxc = i2c_mux_alloc(adap, &client->dev, CPLD_MUX_MAX_NCHANS,
+	muxc = i2c_mux_alloc(adap, &client->dev, pdata->num_adaps,
 			     sizeof(*data), 0, mlxcpld_mux_select_chan,
 			     mlxcpld_mux_deselect);
 	if (!muxc)
@@ -144,12 +142,8 @@ static int mlxcpld_mux_probe(struct i2c_client *client,
 	data->last_chan = 0; /* force the first selection */
 
 	/* Create an adapter for each channel. */
-	for (num = 0; num < CPLD_MUX_MAX_NCHANS; num++) {
-		if (num >= pdata->num_adaps)
-			/* discard unconfigured channels */
-			break;
-
-		force = pdata->adap_ids[num];
+	for (num = 0; num < pdata->num_adaps; num++) {
+		force = pdata->base_nr ? (pdata->base_nr + num) : pdata->adap_ids[num];
 
 		err = i2c_mux_add_adapter(muxc, force, num, 0);
 		if (err)
