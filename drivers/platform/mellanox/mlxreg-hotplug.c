@@ -169,8 +169,7 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 
 	pdata = dev_get_platdata(&priv->pdev->dev);
 	switch (data->hpdev.action) {
-	case MLXREG_HOTPLUG_DEVICE_PRB_REM:
-	case MLXREG_HOTPLUG_DEVICE_PRB_ONLY:
+	case MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION:
 		data->hpdev.adapter = i2c_get_adapter(data->hpdev.nr +
 						      pdata->shift_nr);
 		if (!data->hpdev.adapter) {
@@ -193,6 +192,14 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 			data->hpdev.adapter = NULL;
 			return -EFAULT;
 		}
+		break;
+	case MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION:
+		data->hpdev.pdev = platform_device_register_resndata(priv->dev, data->hpdev.brdinfo->type, data->hpdev.nr,
+								     NULL, 0, data, sizeof(*data));
+		if (IS_ERR(data->hpdev.pdev))
+			return PTR_ERR(data->hpdev.pdev);
+
+		break;
 	default:
 		break;
 	}
@@ -221,8 +228,7 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 	mlxreg_hotplug_udev_event_send(&priv->hwmon->kobj, data, false);
 
 	switch (data->hpdev.action) {
-	case MLXREG_HOTPLUG_DEVICE_PRB_REM:
-	case MLXREG_HOTPLUG_DEVICE_REM_ONLY:
+	case MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION:
 		if (data->hpdev.client) {
 			i2c_unregister_device(data->hpdev.client);
 			data->hpdev.client = NULL;
@@ -232,6 +238,10 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 			i2c_put_adapter(data->hpdev.adapter);
 			data->hpdev.adapter = NULL;
 		}
+		break;
+	case MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION:
+		if (data->hpdev.pdev)
+			platform_device_unregister(data->hpdev.pdev);
 		break;
 	default:
 		break;

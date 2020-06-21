@@ -72,15 +72,15 @@ enum mlxreg_hotplug_kind {
  * enum mlxreg_hotplug_device_action - hotplug device action required for
  *				       driver's connectivity
  *
- * @MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION: probe device for 'on' event remove for 'off' event;
- * @MLXREG_HOTPLUG_DEVICE_PRB_ONLY: probe device for 'on' event, do not remove;
- * @MLXREG_HOTPLUG_DEVICE_REM_ONLY: remove device for 'off' event, do not probe;
+ * @MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION: probe device for 'on' event, remove for 'off' event;
+ * @MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION: probe platform device for 'on' event, notify for 'off' event;
+ * @MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION: remove platform device for 'off' event, notify for 'on' event;
  * @MLXREG_HOTPLUG_DEVICE_NO_ACTION: no connectivity action is required;
  */
 enum mlxreg_hotplug_device_action {
 	MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION = 0,
-	MLXREG_HOTPLUG_DEVICE_PRB_ONLY = 1,
-	MLXREG_HOTPLUG_DEVICE_REM_ONLY = 2,
+	MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION = 1,
+	MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION = 2,
 	MLXREG_HOTPLUG_DEVICE_NO_ACTION = 3,
 };
 
@@ -91,6 +91,7 @@ enum mlxreg_hotplug_device_action {
  * @client: I2C device client;
  * @brdinfo: device board information;
  * @nr: I2C device adapter number, to which device is to be attached;
+ * @pdev: platform device, if device is instantiated as a platform device;
  * @no_probed: do not probe device if set non zero;
  *
  * Structure represents I2C hotplug device static data (board topology) and
@@ -101,6 +102,7 @@ struct mlxreg_hotplug_device {
 	struct i2c_client *client;
 	struct i2c_board_info *brdinfo;
 	int nr;
+	struct platform_device *pdev;
 	enum mlxreg_hotplug_device_action action;
 };
 
