@@ -72,13 +72,13 @@ enum mlxreg_hotplug_kind {
  * enum mlxreg_hotplug_device_action - hotplug device action required for
  *				       driver's connectivity
  *
- * @MLXREG_HOTPLUG_DEVICE_PRB_REM: probe device for 'on' event remove for 'off' event;
+ * @MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION: probe device for 'on' event remove for 'off' event;
  * @MLXREG_HOTPLUG_DEVICE_PRB_ONLY: probe device for 'on' event, do not remove;
  * @MLXREG_HOTPLUG_DEVICE_REM_ONLY: remove device for 'off' event, do not probe;
  * @MLXREG_HOTPLUG_DEVICE_NO_ACTION: no connectivity action is required;
  */
 enum mlxreg_hotplug_device_action {
-	MLXREG_HOTPLUG_DEVICE_PRB_REM = 0,
+	MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION = 0,
 	MLXREG_HOTPLUG_DEVICE_PRB_ONLY = 1,
 	MLXREG_HOTPLUG_DEVICE_REM_ONLY = 2,
 	MLXREG_HOTPLUG_DEVICE_NO_ACTION = 3,
@@ -118,6 +118,7 @@ struct mlxreg_hotplug_device {
  * @health_cntr: dynamic device health indication counter;
  * @attached: true if device has been attached after good health indication;
  * @regnum: number of registers occupied by multi-register attribute;
+ * @slot: slot number, at which device is located;
  */
 struct mlxreg_core_data {
 	char label[MLXREG_CORE_LABEL_MAX_SIZE];
@@ -131,6 +132,7 @@ struct mlxreg_core_data {
 	u8 health_cntr;
 	bool attached;
 	u8 regnum;
+	u8 slot;
 };
 
 /**
@@ -214,7 +216,7 @@ struct mlxreg_core_hotplug_platform_data {
  * @label: label of attribute, associated with event;
  * @slot: device location;
  * @topo_id: device topology id;
- * @action: true - action is on, false is off;
+ * @action: true - non zero - action is on, zero - is off;
  */
 struct mlxplat_notifier_info {
 	void *handle;
