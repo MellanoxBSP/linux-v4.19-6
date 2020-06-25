@@ -2,7 +2,7 @@
 /*
  * Mellanox line card driver
  *
- * Copyright (C) 2020 Mellanox Technologies
+ * Copyright (C) 2020 Mellanox Technologies Ltd.
  */
 
 #include <linux/device.h>
@@ -288,13 +288,7 @@ static struct mlxreg_core_data mlxreg_lc_regs_io_data[] = {
 		.mode = 0444,
 	},
 	{
-		.label = "fpga_not_done",
-		.reg = MLXREG_LC_REG_RESET_CAUSE_OFFSET,
-		.mask = GENMASK(7, 0) & ~BIT(0),
-		.mode = 0444,
-	},
-	{
-		.label = "fpga_not_done",
+		.label = "reset_fpga_not_done",
 		.reg = MLXREG_LC_REG_RESET_CAUSE_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(1),
 		.mode = 0444,
@@ -306,7 +300,7 @@ static struct mlxreg_core_data mlxreg_lc_regs_io_data[] = {
 		.mode = 0444,
 	},
 	{
-		.label = "dc_dc_pwr_fail",
+		.label = "reset_dc_dc_pwr_fail",
 		.reg = MLXREG_LC_REG_RESET_CAUSE_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(3),
 		.mode = 0444,
@@ -318,7 +312,7 @@ static struct mlxreg_core_data mlxreg_lc_regs_io_data[] = {
 		.mode = 0444,
 	},
 	{
-		.label = "pwr_off_from_chassis",
+		.label = "reset_pwr_off_from_chassis",
 		.reg = MLXREG_LC_REG_RESET_CAUSE_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(5),
 		.mode = 0444,
@@ -330,7 +324,7 @@ static struct mlxreg_core_data mlxreg_lc_regs_io_data[] = {
 		.mode = 0444,
 	},
 	{
-		.label = "pwr_en_line_card",
+		.label = "lc_pwr_en",
 		.reg = MLXREG_LC_REG_RESET_CAUSE_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(7),
 		.mode = 0444,
@@ -342,7 +336,7 @@ static struct mlxreg_core_data mlxreg_lc_regs_io_data[] = {
 		.mode = 0644,
 	},
 	{
-		.label = "cpld_upgrade_en",
+		.label = "fpga_upgrade_en",
 		.reg = MLXREG_LC_REG_FIELD_UPGRADE,
 		.mask = GENMASK(7, 0) & ~BIT(1),
 		.mode = 0644,
@@ -441,10 +435,14 @@ static void mlxreg_lc_destroy_static_devices(struct mlxreg_lc *mlxreg_lc, struct
 
 	/* Destroy static I2C device feeding by auxiliary power. */
 	for (i = 0; i < size; i++, dev++) {
-		i2c_unregister_device(dev->client);
-		dev->client = NULL;
-		i2c_put_adapter(dev->adapter);
-		dev->adapter = NULL;
+		if (dev->client) {
+			i2c_unregister_device(dev->client);
+			dev->client = NULL;
+		}
+		if (dev->adapter) {
+			i2c_put_adapter(dev->adapter);
+			dev->adapter = NULL;
+		}
 	}
 }
 
@@ -478,7 +476,7 @@ static void mlxreg_lc_powered_secured_exit(struct mlxplat_notifier_info *info)
 static int mlxreg_lc_event(struct notifier_block *unused, unsigned long event, void *data)
 {
 	struct mlxplat_notifier_info *info = data;
-	int err;
+	int err = NOTIFY_DONE;
 
 	switch (event) {
 	case MLXREG_HOTPLUG_LC_SECURED:
@@ -491,7 +489,7 @@ static int mlxreg_lc_event(struct notifier_block *unused, unsigned long event, v
 		break;
 	}
 
-	return NOTIFY_DONE;
+	return err;
 }
 
 struct notifier_block mlxreg_lc_notifier_block = {
@@ -555,7 +553,7 @@ static int mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap, stru
 	if (IS_ERR(mlxreg_lc->mux))
 		return PTR_ERR(mlxreg_lc->mux);
 
-	/* Add registers io access driver. */
+	/* Register IO access driver. */
 	if (mlxreg_lc->regs_io_data) {
 		mlxreg_lc->regs_io_data->regmap = regmap;
 		mlxreg_lc->io_regs = platform_device_register_resndata(dev, "mlxreg-io", data->hpdev.nr, NULL, 0,
@@ -566,7 +564,7 @@ static int mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap, stru
 		}
 	}
 
-	/* Add LED driver. */
+	/* Register LED driver. */
 	if (mlxreg_lc->led_data) {
 		mlxreg_lc->led_data->regmap = regmap;
 		mlxreg_lc->led = platform_device_register_resndata(dev, "leds-mlxreg", data->hpdev.nr, NULL, 0,
@@ -590,10 +588,13 @@ fail_register_io:
 
 static void mlxreg_lc_config_exit(struct mlxreg_lc *mlxreg_lc)
 {
+	/* Unregister LED driver. */
 	if (mlxreg_lc->led)
 		platform_device_unregister(mlxreg_lc->led);
+	/* Unregister IO access driver. */
 	if (mlxreg_lc->io_regs)
 		platform_device_unregister(mlxreg_lc->io_regs);
+	/* Create mux infrastructure. */
 	if (mlxreg_lc->mux)
 		i2c_unregister_device(mlxreg_lc->mux);
 }
@@ -692,6 +693,11 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
 	if (!list_empty(&mlxreg_lc_list.list))
 		list_del_rcu(&mlxreg_lc->list);
 
+	/* Destroy static I2C device feeding by main power. */
+	mlxreg_lc_destroy_static_devices(mlxreg_lc, mlxreg_lc->aux_devs, mlxreg_lc->main_devs_num);
+	/* Destroy static I2C device feeding by auxiliary power. */
+	mlxreg_lc_destroy_static_devices(mlxreg_lc, mlxreg_lc->aux_devs, mlxreg_lc->aux_devs_num);
+	/* Unregister underlying drivers. */
 	mlxreg_lc_config_exit(mlxreg_lc);
 	data = pdata->items->data;
 	if (data->hpdev.client) {
