@@ -154,10 +154,10 @@
 #define MLXPLAT_CPLD_AGGR_MASK_MODULAR	(MLXPLAT_CPLD_AGGR_MASK_NG_DEF | MLXPLAT_CPLD_AGGR_MASK_COMEX | \
 					 MLXPLAT_CPLD_AGGR_MASK_LC)
 #define MLXPLAT_CPLD_AGGR_MASK_LC_PRSNT	BIT(0)
-#define MLXPLAT_CPLD_AGGR_MASK_LC_FWOK	BIT(1)
+#define MLXPLAT_CPLD_AGGR_MASK_LC_RDY	BIT(1)
 #define MLXPLAT_CPLD_AGGR_MASK_LC_PG	BIT(2)
-#define MLXPLAT_CPLD_AGGR_MASK_LC_RDY	BIT(3)
-#define MLXPLAT_CPLD_AGGR_MASK_LC_SCRD	BIT(4)
+#define MLXPLAT_CPLD_AGGR_MASK_LC_SCRD	BIT(3)
+#define MLXPLAT_CPLD_AGGR_MASK_LC_FWOK	BIT(4)
 #define MLXPLAT_CPLD_AGGR_MASK_LC_LOW	(MLXPLAT_CPLD_AGGR_MASK_LC_PRSNT | MLXPLAT_CPLD_AGGR_MASK_LC_FWOK | \
 					 MLXPLAT_CPLD_AGGR_MASK_LC_PG | MLXPLAT_CPLD_AGGR_MASK_LC_RDY | MLXPLAT_CPLD_AGGR_MASK_LC_SCRD)
 #define MLXPLAT_CPLD_LOW_AGGR_MASK_LOW	0xc1
@@ -2279,49 +2279,49 @@ static struct mlxreg_core_data mlxplat_mlxcpld_default_ng_regs_io_data[] = {
 		.mode = 0444,
 	},
 	{
-		.label = "reset_lc1",
+		.label = "lc1_reset",
 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(0),
 		.mode = 0200,
 	},
 	{
-		.label = "reset_lc2",
+		.label = "lc2_reset",
 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(1),
 		.mode = 0200,
 	},
 	{
-		.label = "reset_lc3",
+		.label = "lc3_reset",
 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(2),
 		.mode = 0200,
 	},
 	{
-		.label = "reset_lc4",
+		.label = "lc4_reset",
 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(3),
 		.mode = 0200,
 	},
 	{
-		.label = "reset_lc5",
+		.label = "lc5_reset",
 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(4),
 		.mode = 0200,
 	},
 	{
-		.label = "reset_lc6",
+		.label = "lc6_reset",
 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(5),
 		.mode = 0200,
 	},
 	{
-		.label = "reset_lc7",
+		.label = "lc7_reset",
 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(6),
 		.mode = 0200,
 	},
 	{
-		.label = "reset_lc8",
+		.label = "lc8_reset",
 		.reg = MLXPLAT_CPLD_LPC_REG_RESET_GP4_OFFSET,
 		.mask = GENMASK(7, 0) & ~BIT(7),
 		.mode = 0200,
