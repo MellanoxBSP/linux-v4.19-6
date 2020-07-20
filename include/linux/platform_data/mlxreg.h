@@ -57,6 +57,7 @@ enum mlxreg_wdt_type {
  * @MLXREG_HOTPLUG_LC_SECURED: entry for line card security events;
  * @MLXREG_HOTPLUG_LC_PRSNT: entry for line card presence events;
  * @MLXREG_HOTPLUG_LC_PWR: entry for line card power events;
+ * @MLXREG_HOTPLUG_LC_SYNCED: entry for line card bus synchronization events;
  * @MLXREG_HOTPLUG_PWR: entry for power controller events;
  */
 enum mlxreg_hotplug_kind {
@@ -65,7 +66,8 @@ enum mlxreg_hotplug_kind {
 	MLXREG_HOTPLUG_LC_SECURED = 2,
 	MLXREG_HOTPLUG_LC_PRSNT = 3,
 	MLXREG_HOTPLUG_LC_PWR = 4,
-	MLXREG_HOTPLUG_PWR = 5,
+	MLXREG_HOTPLUG_LC_SYNCED = 5,
+	MLXREG_HOTPLUG_PWR = 6,
 };
 
 /**
