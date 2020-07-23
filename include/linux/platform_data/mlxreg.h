@@ -74,9 +74,13 @@ enum mlxreg_hotplug_kind {
  * enum mlxreg_hotplug_device_action - hotplug device action required for
  *				       driver's connectivity
  *
- * @MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION: probe device for 'on' event, remove for 'off' event;
- * @MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION: probe platform device for 'on' event, notify for 'off' event;
- * @MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION: remove platform device for 'off' event, notify for 'on' event;
+ * @MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION: probe device for 'on' event, remove
+ *					  for 'off' event;
+ * @MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION: probe platform device for 'on'
+ *						 event, notify for 'off' event;
+ * @MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION: remove platform device for
+ *						  'off' event, notify for 'on'
+ *						   event;
  * @MLXREG_HOTPLUG_DEVICE_NO_ACTION: no connectivity action is required;
  */
 enum mlxreg_hotplug_device_action {
@@ -143,6 +147,7 @@ struct mlxreg_core_data {
  * struct mlxreg_core_item - same type components controlled by the driver:
  *
  * @data: component data;
+ * @kind: kind of hotplug attribute;
  * @aggr_mask: group aggregation mask;
  * @reg: group interrupt status register;
  * @mask: group interrupt mask;

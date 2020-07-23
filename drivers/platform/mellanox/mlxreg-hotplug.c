@@ -114,10 +114,8 @@ mlxreg_hotplug_udev_event_send(struct kobject *kobj,
 	for (i = 0; data->label[i]; i++)
 		label[i] = toupper(data->label[i]);
 
-	if (action)
-		snprintf(event_str, MLXREG_CORE_LABEL_MAX_SIZE, "%s=1", label);
-	else
-		snprintf(event_str, MLXREG_CORE_LABEL_MAX_SIZE, "%s=0", label);
+	snprintf(event_str, MLXREG_CORE_LABEL_MAX_SIZE, "%s=%d", label,
+		 !!action);
 
 	return kobject_uevent_env(kobj, KOBJ_CHANGE, mlxreg_hotplug_udev_envp);
 }
@@ -156,6 +154,7 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 {
 	struct i2c_board_info *brdinfo = data->hpdev.brdinfo;
 	struct mlxreg_core_hotplug_platform_data *pdata;
+	struct i2c_client *client;
 
 	/* Notify user by sending hwmon uevent. */
 	mlxreg_hotplug_udev_event_send(&priv->hwmon->kobj, data, true);
@@ -177,25 +176,32 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 				data->hpdev.nr + pdata->shift_nr);
 			return -EFAULT;
 		}
+
+		/* Export platform data to underlying device. */
 		if (brdinfo->platform_data)
 			mlxreg_hotplug_pdata_export(brdinfo->platform_data,
 						    pdata->regmap, priv->irq);
 
-		data->hpdev.client = i2c_new_device(data->hpdev.adapter,
-						    brdinfo);
-		if (!data->hpdev.client) {
+		client = i2c_new_device(data->hpdev.adapter, brdinfo);
+		if (IS_ERR(client)) {
 			dev_err(priv->dev, "Failed to create client %s at bus %d at addr 0x%02x\n",
 				brdinfo->type, data->hpdev.nr +
 				pdata->shift_nr, brdinfo->addr);
 
 			i2c_put_adapter(data->hpdev.adapter);
 			data->hpdev.adapter = NULL;
-			return -EFAULT;
+			return PTR_ERR(client);
 		}
+
+		data->hpdev.client = client;
 		break;
 	case MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION:
-		data->hpdev.pdev = platform_device_register_resndata(priv->dev, data->hpdev.brdinfo->type, data->hpdev.nr,
-								     NULL, 0, data, sizeof(*data));
+		data->hpdev.pdev =
+			platform_device_register_resndata(priv->dev,
+							  brdinfo->type,
+							  data->hpdev.nr,
+							  NULL, 0, data,
+							  sizeof(*data));
 		if (IS_ERR(data->hpdev.pdev))
 			return PTR_ERR(data->hpdev.pdev);
 
