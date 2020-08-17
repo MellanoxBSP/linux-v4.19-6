@@ -18,7 +18,7 @@
 
 /* Attribute parameters. */
 #define MLXREG_IO_ATT_SIZE	10
-#define MLXREG_IO_ATT_NUM	48
+#define MLXREG_IO_ATT_NUM	96
 
 /**
  * struct mlxreg_io_priv_data - driver's private data:
@@ -31,7 +31,6 @@
  * @group: sysfs attribute group;
  * @groups: list of sysfs attribute group for hwmon registration;
  * @regsize: size of a register value;
- * @regmax: max register value;
  */
 struct mlxreg_io_priv_data {
 	struct platform_device *pdev;
@@ -42,12 +41,11 @@ struct mlxreg_io_priv_data {
 	struct attribute_group group;
 	const struct attribute_group *groups[2];
 	int regsize;
-	int regmax;
 };
 
 static int
 mlxreg_io_get_reg(void *regmap, struct mlxreg_core_data *data, u32 in_val,
-		  bool rw_flag, int regsize, int regmax, u32 *regval)
+		  bool rw_flag, int regsize, u32 *regval)
 {
 	int i, val, ret;
 
@@ -61,11 +59,11 @@ mlxreg_io_get_reg(void *regmap, struct mlxreg_core_data *data, u32 in_val,
 	 * mask indicates which bits are not related and field bit is set zero.
 	 * For the second kind field mask is set to zero and field bit is set
 	 * with all bits one. No special handling for such kind of attributes -
-	 * pass value as is. For the third kind, field mask indicates which
-	 * bits are related and field bit is set to the first bit number (from
-	 * 1 to 32) is the bit sequence. For the fourth mask - the number of
-	 * registers which should be written for attribute are set according
-	 * to 'data->bit' field.
+	 * pass value as is. For the third kind, the field mask indicates which
+	 * bits are related and the field bit is set to the first bit number
+	 * (from 1 to 32) is the bit sequence. For the fourth kind - the number
+	 * of registers which should be read for getting an attribute are
+	 * specified through 'data->regnum' field.
 	 */
 	if (!data->bit) {
 		/* Single bit. */
@@ -92,10 +90,8 @@ mlxreg_io_get_reg(void *regmap, struct mlxreg_core_data *data, u32 in_val,
 	} else {
 		/*
 		 * Some attributes could occupied few registers in case regmap
-		 * bit size is 8 or 16. Maximum register for such case is
-		 * respectively 0xff or 0xffff. Not relevant for the case, when
-		 * regmap bit size is 32 and maximum registers 0xffffffff.
-		 * Compose attribute from 'regnum' registers.
+		 * bit size is 8 or 16. Compose such attributes from 'regnum'
+		 * registers. Such attributes contain read-only data.
 		 */
 		for (i = 1; i < data->regnum; i++) {
 			ret = regmap_read(regmap, data->reg + i, &val);
@@ -104,7 +100,6 @@ mlxreg_io_get_reg(void *regmap, struct mlxreg_core_data *data, u32 in_val,
 
 			*regval |= rol32(val, regsize * i);
 		}
-		*regval = le32_to_cpu(*regval & regmax);
 	}
 
 access_error:
@@ -122,7 +117,7 @@ mlxreg_io_attr_show(struct device *dev, struct device_attribute *attr,
 	int ret;
 
 	ret = mlxreg_io_get_reg(priv->pdata->regmap, data, 0, true,
-				priv->regsize, priv->regmax, &regval);
+				priv->regsize, &regval);
 	if (ret)
 		goto access_error;
 
@@ -151,7 +146,7 @@ mlxreg_io_attr_store(struct device *dev, struct device_attribute *attr,
 		return ret;
 
 	ret = mlxreg_io_get_reg(priv->pdata->regmap, data, input_val, false,
-				priv->regsize, priv->regmax, &regval);
+				priv->regsize, &regval);
 	if (ret)
 		goto access_error;
 
@@ -233,10 +228,6 @@ static int mlxreg_io_probe(struct platform_device *pdev)
 	priv->regsize = regmap_get_val_bytes(priv->pdata->regmap);
 	if (priv->regsize < 0)
 		return priv->regsize;
-
-	priv->regmax = regmap_get_max_register(priv->pdata->regmap);
-	if (priv->regmax < 0)
-		return priv->regmax;
 
 	err = mlxreg_io_attr_init(priv);
 	if (err) {
