@@ -1,35 +1,8 @@
+// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
 /*
- * drivers/i2c/muxes/i2c-mux-mlxcpld.c
- * Copyright (c) 2016 Mellanox Technologies. All rights reserved.
- * Copyright (c) 2016 Michael Shych <michaels@mellanox.com>
+ * Mellanox i2c mux driver
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the names of the copyright holders nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Copyright (C) 2016-2020 Mellanox Technologies
  */
 
 #include <linux/device.h>
@@ -38,11 +11,9 @@
 #include <linux/io.h>
 #include <linux/init.h>
 #include <linux/module.h>
-#include <linux/platform_data/x86/mlxcpld.h>
+#include <linux/platform_data/mlxcpld.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-
-#define CPLD_MUX_MAX_NCHANS	8
 
 /* mlxcpld_mux - mux control structure:
  * @last_chan - last register value
@@ -98,14 +69,15 @@ static int mlxcpld_mux_reg_write(struct i2c_adapter *adap,
 
 	return __i2c_smbus_xfer(adap, client->addr, client->flags,
 				I2C_SMBUS_WRITE, pdata->sel_reg_addr,
-				I2C_SMBUS_BYTE_DATA, &data);
+				pdata->reg_size, &data);
 }
 
 static int mlxcpld_mux_select_chan(struct i2c_mux_core *muxc, u32 chan)
 {
 	struct mlxcpld_mux *data = i2c_mux_priv(muxc);
 	struct i2c_client *client = data->client;
-	u8 regval = chan + 1;
+	struct mlxcpld_mux_plat_data *pdata = dev_get_platdata(&client->dev);
+	u8 regval = pdata->base_nr ? chan - pdata->base_nr : chan + 1;
 	int err = 0;
 
 	/* Only select the channel if its different from the last channel */
@@ -137,15 +109,28 @@ static int mlxcpld_mux_probe(struct i2c_client *client,
 	struct i2c_mux_core *muxc;
 	int num, force;
 	struct mlxcpld_mux *data;
+	u32 func;
 	int err;
 
 	if (!pdata)
 		return -EINVAL;
 
-	if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_WRITE_BYTE_DATA))
+	pdata->reg_size = pdata->reg_size ? pdata->reg_size : I2C_FUNC_SMBUS_WRITE_BYTE_DATA;
+	switch (pdata->reg_size) {
+	case I2C_SMBUS_WORD_DATA:
+		func = I2C_FUNC_SMBUS_WRITE_WORD_DATA;
+		break;
+	case I2C_SMBUS_BYTE_DATA:
+		func = I2C_FUNC_SMBUS_WRITE_BYTE_DATA;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (!i2c_check_functionality(adap, func))
 		return -ENODEV;
 
-	muxc = i2c_mux_alloc(adap, &client->dev, CPLD_MUX_MAX_NCHANS,
+	muxc = i2c_mux_alloc(adap, &client->dev, pdata->num_adaps,
 			     sizeof(*data), 0, mlxcpld_mux_select_chan,
 			     mlxcpld_mux_deselect);
 	if (!muxc)
@@ -157,12 +142,9 @@ static int mlxcpld_mux_probe(struct i2c_client *client,
 	data->last_chan = 0; /* force the first selection */
 
 	/* Create an adapter for each channel. */
-	for (num = 0; num < CPLD_MUX_MAX_NCHANS; num++) {
-		if (num >= pdata->num_adaps)
-			/* discard unconfigured channels */
-			break;
-
-		force = pdata->adap_ids[num];
+	for (num = 0; num < pdata->num_adaps; num++) {
+		force = pdata->base_nr ? (pdata->base_nr +
+			pdata->adap_ids[num]) : pdata->adap_ids[num];
 
 		err = i2c_mux_add_adapter(muxc, force, num, 0);
 		if (err)
