@@ -71,6 +71,7 @@ enum mlxreg_hotplug_device_action {
  * @client: I2C device client;
  * @brdinfo: device board information;
  * @nr: I2C device adapter number, to which device is to be attached;
+ * @pdev: platform device, if device is instantiated as a platform device;
  * @action: action to be performed upon event receiving;
  *
  * Structure represents I2C hotplug device static data (board topology) and
@@ -81,6 +82,7 @@ struct mlxreg_hotplug_device {
 	struct i2c_client *client;
 	struct i2c_board_info *brdinfo;
 	int nr;
+	struct platform_device *pdev;
 	enum mlxreg_hotplug_device_action action;
 };
 
