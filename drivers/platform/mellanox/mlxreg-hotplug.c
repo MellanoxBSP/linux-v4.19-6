@@ -30,6 +30,7 @@
 
 #define MLXREG_HOTPLUG_ATTRS_MAX	24
 #define MLXREG_HOTPLUG_NOT_ASSERT	3
+#define MLXREG_HOTPLUG_SHIFT_NR		16
 
 /**
  * struct mlxreg_hotplug_priv_data - platform private data:
@@ -105,6 +106,24 @@ mlxreg_hotplug_pdata_export(void *pdata, void *regmap, int irq)
 	dev_pdata->irq = irq;
 }
 
+static void
+mlxreg_hotplug_notify(struct mlxreg_hotplug_priv_data *priv,
+		      struct mlxreg_core_hotplug_platform_data *pdata,
+		      struct mlxreg_core_data *data,
+		      enum mlxreg_hotplug_kind kind, int id, bool act)
+{
+	struct mlxplat_notifier_info info;
+
+	info.handle = data->hpdev.client;
+	info.slot = id;
+	info.action = act;
+	strncpy(info.label, data->label, sizeof(data->label));
+	info.topo_id = rol32(data->hpdev.nr + pdata->shift_nr,
+			     MLXREG_HOTPLUG_SHIFT_NR) |
+			     data->hpdev.brdinfo->addr;
+	mlxplat_blk_notifiers_call_chain(kind, &info);
+}
+
 static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 					struct mlxreg_core_data *data,
 					enum mlxreg_hotplug_kind kind, int id)
@@ -167,6 +186,16 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 		break;
 	}
 
+	switch (kind) {
+	case MLXREG_HOTPLUG_LC_POWERED:
+	case MLXREG_HOTPLUG_LC_SYNCED:
+	case MLXREG_HOTPLUG_LC_READY:
+		mlxreg_hotplug_notify(priv, pdata, data, kind, id, 1);
+		break;
+	default:
+		break;
+	}
+
 	return 0;
 }
 
@@ -175,6 +204,8 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 			      struct mlxreg_core_data *data,
 			      enum mlxreg_hotplug_kind kind, int id)
 {
+	struct mlxreg_core_hotplug_platform_data *pdata;
+
 	/* Notify user by sending hwmon uevent. */
 	mlxreg_hotplug_udev_event_send(&priv->hwmon->kobj, data, false);
 
@@ -193,6 +224,19 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 	case MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION:
 		if (data->hpdev.pdev)
 			platform_device_unregister(data->hpdev.pdev);
+		break;
+	default:
+		break;
+	}
+
+	switch (kind) {
+	case MLXREG_HOTPLUG_LC_PRESENT:
+	case MLXREG_HOTPLUG_LC_VERIFIED:
+	case MLXREG_HOTPLUG_LC_POWERED:
+	case MLXREG_HOTPLUG_LC_SYNCED:
+	case MLXREG_HOTPLUG_LC_READY:
+		pdata = dev_get_platdata(&priv->pdev->dev);
+		mlxreg_hotplug_notify(priv, pdata, data, kind, id, 0);
 		break;
 	default:
 		break;
