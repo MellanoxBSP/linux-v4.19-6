@@ -28,7 +28,7 @@
 /* ASIC good health mask. */
 #define MLXREG_HOTPLUG_GOOD_HEALTH_MASK	0x02
 
-#define MLXREG_HOTPLUG_ATTRS_MAX	24
+#define MLXREG_HOTPLUG_ATTRS_MAX	64
 #define MLXREG_HOTPLUG_NOT_ASSERT	3
 #define MLXREG_HOTPLUG_SHIFT_NR		16
 
@@ -173,7 +173,7 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 		break;
 	case MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION:
 		data->hpdev.pdev =
-			platform_device_register_resndata(priv->dev,
+			platform_device_register_resndata(&priv->pdev->dev,
 							  brdinfo->type,
 							  data->hpdev.nr,
 							  NULL, 0, data,

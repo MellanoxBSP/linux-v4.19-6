@@ -220,6 +220,7 @@
 #define MLXPLAT_CPLD_NR_NONE			-1
 #define MLXPLAT_CPLD_PSU_DEFAULT_NR		10
 #define MLXPLAT_CPLD_PSU_MSNXXXX_NR		4
+#define MLXPLAT_CPLD_PSU_MODULAR_NR		5
 #define MLXPLAT_CPLD_FAN1_DEFAULT_NR		11
 #define MLXPLAT_CPLD_FAN2_DEFAULT_NR		12
 #define MLXPLAT_CPLD_FAN3_DEFAULT_NR		13
@@ -1134,6 +1135,37 @@ struct mlxreg_core_hotplug_platform_data mlxplat_mlxcpld_ext_data = {
 	.mask_low = MLXPLAT_CPLD_LOW_AGGR_MASK_LOW,
 };
 
+static struct mlxreg_core_data mlxplat_mlxcpld_modular_pwr_items_data[] = {
+	{
+		.label = "pwr1",
+		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
+		.mask = BIT(0),
+		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[0],
+		.hpdev.nr = MLXPLAT_CPLD_PSU_MODULAR_NR,
+	},
+	{
+		.label = "pwr2",
+		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
+		.mask = BIT(1),
+		.hpdev.brdinfo = &mlxplat_mlxcpld_pwr[1],
+		.hpdev.nr = MLXPLAT_CPLD_PSU_MODULAR_NR,
+	},
+	{
+		.label = "pwr3",
+		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
+		.mask = BIT(2),
+		.hpdev.brdinfo = &mlxplat_mlxcpld_ext_pwr[0],
+		.hpdev.nr = MLXPLAT_CPLD_PSU_MODULAR_NR,
+	},
+	{
+		.label = "pwr4",
+		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
+		.mask = BIT(3),
+		.hpdev.brdinfo = &mlxplat_mlxcpld_ext_pwr[1],
+		.hpdev.nr = MLXPLAT_CPLD_PSU_MODULAR_NR,
+	},
+};
+
 /* Platform hotplug modular system family data */
 static struct mlxreg_core_data mlxplat_mlxcpld_modular_lc_act_data[] = {
 	{
@@ -1231,7 +1263,7 @@ static struct mlxreg_core_data mlxplat_mlxcpld_modular_asic_items_data[] = {
 
 static struct i2c_board_info mlxplat_mlxcpld_lc_i2c_dev[] = {
 	{
-		I2C_BOARD_INFO("mlxreg_lc", MLXPLAT_CPLD_LC_ADDR),
+		I2C_BOARD_INFO("mlxreg-lc", MLXPLAT_CPLD_LC_ADDR),
 	},
 };
 
@@ -1622,7 +1654,7 @@ static struct mlxreg_core_item mlxplat_mlxcpld_modular_items[] = {
 		.health = false,
 	},
 	{
-		.data = mlxplat_mlxcpld_ext_pwr_items_data,
+		.data = mlxplat_mlxcpld_modular_pwr_items_data,
 		.aggr_mask = MLXPLAT_CPLD_AGGR_MASK_NG_DEF,
 		.reg = MLXPLAT_CPLD_LPC_REG_PWR_OFFSET,
 		.mask = MLXPLAT_CPLD_PWR_EXT_MASK,

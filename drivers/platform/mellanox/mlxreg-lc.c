@@ -630,22 +630,20 @@ static void mlxreg_lc_config_exit(struct mlxreg_lc *mlxreg_lc)
 
 static int mlxreg_lc_probe(struct platform_device *pdev)
 {
-	struct mlxreg_core_hotplug_platform_data *pdata;
 	struct i2c_adapter *deferred_adap;
 	struct mlxreg_core_data *data;
 	struct mlxreg_lc *mlxreg_lc;
 	void *regmap;
-	int i, err;
+	int deferred_nr, i, err;
 
-	pdata = dev_get_platdata(&pdev->dev);
-	if (!pdata)
+	data = dev_get_platdata(&pdev->dev);
+	if (!data)
 		return -EINVAL;
 
 	mlxreg_lc = devm_kzalloc(&pdev->dev, sizeof(*mlxreg_lc), GFP_KERNEL);
 	if (!mlxreg_lc)
 		return -ENOMEM;
 
-	data = pdata->items->data;
 	data->hpdev.adapter = i2c_get_adapter(data->hpdev.nr);
 	if (!data->hpdev.adapter) {
 		dev_err(&pdev->dev, "Failed to get adapter for bus %d\n",
@@ -653,6 +651,7 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
 		return -EFAULT;
 	}
 
+	/* Create device at the head of line card I2C tree.*/
 	data->hpdev.client = i2c_new_device(data->hpdev.adapter,
 					    data->hpdev.brdinfo);
 	if (IS_ERR(data->hpdev.client)) {
@@ -691,12 +690,17 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
 	if (err)
 		goto mlxreg_lc_probe_fail;
 
-	/* Defer probing if the necessary adapter is not configured yet. */
-	deferred_adap = i2c_get_adapter(pdata->deferred_nr);
+	/*
+	 * Set line card higher adapter number. Defer probing if the higher
+	 * adapter is not configured yet.
+	 */
+	deferred_nr = mlxreg_lc_channels[ARRAY_SIZE(mlxreg_lc_channels) - 1] +
+		      data->hpdev.nr;
+
+	deferred_adap = i2c_get_adapter(deferred_nr);
 	if (!deferred_adap)
 		return -EPROBE_DEFER;
 	i2c_put_adapter(deferred_adap);
-
 	/* Create static I2C device feeding by auxiliary power. */
 	err = mlxreg_lc_create_static_devices(mlxreg_lc, mlxreg_lc->aux_devs,
 					      mlxreg_lc->aux_devs_num);
@@ -747,18 +751,11 @@ static int mlxreg_lc_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id mlxreg_lc_of_match[] = {
-	{ .compatible = "mellanox,lc_sn4800_c16", },
-	{},
-};
-MODULE_DEVICE_TABLE(of, mlxreg_lc_of_match);
-
 static struct platform_driver mlxreg_lc_driver = {
 	.probe = mlxreg_lc_probe,
 	.remove = mlxreg_lc_remove,
 	.driver = {
 		.name = "mlxreg-lc",
-		.of_match_table = of_match_ptr(mlxreg_lc_of_match),
 	},
 };
 
