@@ -8156,6 +8156,12 @@ MLXSW_ITEM32(reg, mcia, page_number, 0x04, 16, 8);
  */
 MLXSW_ITEM32(reg, mcia, device_address, 0x04, 0, 16);
 
+/* reg_mcia_bank_number
+ * Bank number.
+ * Access: RW
+ */
+MLXSW_ITEM32(reg, mcia, bank_number, 0x08, 16, 8);
+
 /* reg_mcia_size
  * Number of bytes to read/write (up to 48 bytes).
  * Access: RW
@@ -8208,13 +8214,15 @@ MLXSW_ITEM_BUF(reg, mcia, eeprom, 0x10, MLXSW_REG_MCIA_EEPROM_SIZE);
 				MLXSW_REG_MCIA_EEPROM_UP_PAGE_LENGTH + 1)
 
 static inline void mlxsw_reg_mcia_pack(char *payload, u8 module, u8 lock,
-				       u8 page_number, u16 device_addr,
-				       u8 size, u8 i2c_device_addr)
+				       u8 page_number, u8 bank_number,
+				       u16 device_addr, u8 size,
+				       u8 i2c_device_addr)
 {
 	MLXSW_REG_ZERO(mcia, payload);
 	mlxsw_reg_mcia_module_set(payload, module);
 	mlxsw_reg_mcia_l_set(payload, lock);
 	mlxsw_reg_mcia_page_number_set(payload, page_number);
+	mlxsw_reg_mcia_bank_number_set(payload, bank_number);
 	mlxsw_reg_mcia_device_address_set(payload, device_addr);
 	mlxsw_reg_mcia_size_set(payload, size);
 	mlxsw_reg_mcia_i2c_device_address_set(payload, i2c_device_addr);
