@@ -11,10 +11,21 @@
 #include "reg.h"
 
 #define MLXSW_REG_MCIA_EEPROM_FLAT_MEMORY	BIT(7)
-#define MLXSW_ENV_CMIS_PAGE_OFF	0x0d
-#define MLXSW_ENV_PAGE_MAP(page) (((page) < \
-	MLXSW_REG_MCIA_TH_PAGE_NUM) ? (page) : (page) + \
-	MLXSW_ENV_CMIS_PAGE_OFF)
+#define MLXSW_ENV_CMIS_PAGE3_PRESENSE_OFF	0x8e
+#define MLXSW_ENV_CMIS_PAGE3_PRESENSE_BIT	BIT(2)
+#define MLXSW_ENV_CMIS_BANKS_PRESENSE_BITS	GENMASK(1, 0)
+#define MLXSW_ENV_CMIS_OPT_PAGE			0x03
+#define MLXSW_ENV_CMIS_CH_CTRL_MASK_PAGE	0x10
+
+/* Enumerator for indication which banks are implemented for pages 16, 17.
+ * "Common Management Interface Specification Rev 4.0"
+ * Table 8-28 "Implemented Management Interface Features Advertising".
+ */
+enum mlxsw_env_cmis_banks {
+	MLXSW_ENV_CMIS_BANKS1	= 0x00, /* Only bank 0 is implemented. */
+	MLXSW_ENV_CMIS_BANKS2	= 0x01, /* Banks 0, 1 are implemented. */
+	MLXSW_ENV_CMIS_BANKS4	= 0x10, /* Banks 0, 1, 2, 3 are implemented.*/
+};
 
 static int mlxsw_env_validate_cable_ident(struct mlxsw_core *core, int id,
 					  bool *qsfp, bool *cmis)
@@ -54,15 +65,76 @@ static int mlxsw_env_validate_cable_ident(struct mlxsw_core *core, int id,
 	return 0;
 }
 
+static void
+mlxsw_env_cmis_opt_page_banks_map(u8 opt_page, u8 opt_banks, u8 *page,
+				  u8 *bank)
+{
+	u8 p, s;
+
+	/* If sequential page number is 3 and physical page 3 is implemented -
+	 * do not modify page.
+	 */
+	if (*page == MLXSW_ENV_CMIS_OPT_PAGE && opt_page)
+		return;
+
+	/* Page sequential number conversion to physical page and bank
+	 * for pages 16 and 17 are following the next logic:
+	 *	|---------------|---------------|---------------|
+	 *	|number of	|seq num -> (page, bank)	|
+	 *	|banks		|-------------------------------|
+	 *	|		|page 3		|page 3 not	|
+	 *	|		|implemented	|implemented	|
+	 *	|---------------|---------------|---------------|
+	 *	|	1	|4 -> (16, 0)	|3 -> (16, 0)	|
+	 *	|		|5 -> (17, 0)	|4 -> (17, 0)	|
+	 *	----------------|---------------|---------------|
+	 *	|	2	|4 -> (16, 0)	|3 -> (16, 0)	|
+	 *	|		|5 -> (16, 1)	|4 -> (16, 1)	|
+	 *	|		|6 -> (17, 0)	|5 -> (17, 0)	|
+	 *	|		|7 -> (17, 1)	|6 -> (17, 1)	|
+	 *	|---------------|---------------|---------------|
+	 *	|	4	|4 -> (16, 0)	|3 -> (16, 0)	|
+	 *	|		|5 -> (16, 1)	|4 -> (16, 1)	|
+	 *	|		|6 -> (16, 2)	|5 -> (16, 2)	|
+	 *	|		|7 -> (16, 3)	|6 -> (16, 3)	|
+	 *	|		|8 -> (17, 0)	|7 -> (17, 0)	|
+	 *	|	`	|9 -> (17, 1)	|8 -> (17, 1)	|
+	 *	|		|10-> (17, 2)	|9 -> (17, 2)	|
+	 *	|		|11-> (17, 3)	|10-> (17, 3)	|
+	 *	----------------|---------------|---------------|
+	 *
+	 * Aligned page number between configuration with and with no optional
+	 * page 3 and set scale parameterto simplify mapping calculation.
+	 */
+	p = *page + !!opt_page;
+	switch (opt_banks) {
+	case 2:
+		s = 6;
+		break;
+	case 4:
+		s = 8;
+		break;
+	default:
+		/* Could be reached only in case banks number is 1. */
+		s = 4;
+		break;
+	}
+
+	/* Map page and bank. */
+	*page = p / s + MLXSW_ENV_CMIS_CH_CTRL_MASK_PAGE;
+	*bank = (p % s)  % opt_banks;
+}
+
 static int
 mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
 			      u16 offset, u16 size, bool qsfp, bool cmis,
+			      u8 opt_page, u8 opt_banks,
 			      void *data, unsigned int *p_read_size)
 {
 	char eeprom_tmp[MLXSW_REG_MCIA_EEPROM_SIZE];
 	char mcia_pl[MLXSW_REG_MCIA_LEN];
+	u8 page = 0, bank = 0;
 	u16 i2c_addr;
-	u8 page = 0;
 	int status;
 	int err;
 
@@ -87,9 +159,11 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
 		}
 	}
 
-	if (cmis)
-		page = MLXSW_ENV_PAGE_MAP(page);
-	mlxsw_reg_mcia_pack(mcia_pl, module, 0, page, 0, offset, size,
+	/* Map buffer to correct page and banks. */
+	if (cmis && page >= MLXSW_ENV_CMIS_OPT_PAGE)
+		mlxsw_env_cmis_opt_page_banks_map(opt_page, opt_banks, &page,
+						  &bank);
+	mlxsw_reg_mcia_pack(mcia_pl, module, 0, page, bank, offset, size,
 			    i2c_addr);
 
 	err = mlxsw_reg_query(mlxsw_core, MLXSW_REG(mcia), mcia_pl);
@@ -103,6 +177,59 @@ mlxsw_env_query_module_eeprom(struct mlxsw_core *mlxsw_core, int module,
 	mlxsw_reg_mcia_eeprom_memcpy_from(mcia_pl, eeprom_tmp);
 	memcpy(data, eeprom_tmp, size);
 	*p_read_size = size;
+
+	return 0;
+}
+
+static int
+mlxsw_env_cmis_optional_get(struct mlxsw_core *mlxsw_core, int module,
+			    unsigned int *size, u8 *page, u8 *banks)
+{
+	int options, read_size, num_banks;
+	int err;
+
+	/* Verify if implemented optional page 03h - "User EEPROM (NVRs)", and
+	 * if implemented bank of pages 16 and 17, indicating through the page
+	 * 01h.Refer to "Common Management Interface Specification Rev 4.0",
+	 * Table 8-28 "Implemented Management Interface Features Advertising
+	 * (Page 01h)".
+	 */
+	err = mlxsw_env_query_module_eeprom(mlxsw_core, module,
+					    MLXSW_ENV_CMIS_PAGE3_PRESENSE_OFF,
+					    1, false, false, 0, 0, &options,
+					    &read_size);
+	if (err)
+		return err;
+
+	if (read_size < 1)
+		return -EIO;
+
+	/* Check if optional page 3 in implemented. */
+	if (options & MLXSW_ENV_CMIS_PAGE3_PRESENSE_BIT) {
+		if (size)
+			*size += MLXSW_REG_MCIA_EEPROM_UP_PAGE_LENGTH;
+		if (page)
+			*page = 1;
+	}
+
+	switch (options & MLXSW_ENV_CMIS_BANKS_PRESENSE_BITS) {
+	case MLXSW_ENV_CMIS_BANKS1:
+		num_banks = 1;
+		break;
+	case MLXSW_ENV_CMIS_BANKS2:
+		num_banks = 2;
+		break;
+	case MLXSW_ENV_CMIS_BANKS4:
+		num_banks = 4;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (size)
+		*size += num_banks * MLXSW_REG_MCIA_EEPROM_UP_PAGE_LENGTH;
+	if (banks)
+		*banks = num_banks;
 
 	return 0;
 }
@@ -180,12 +307,12 @@ int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
 	u8 module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE];
 	u16 offset = MLXSW_REG_MCIA_EEPROM_MODULE_INFO_SIZE;
 	u8 module_rev_id, module_id, diag_mon;
-	unsigned int read_size;
+	unsigned int read_size, opt_size = 0;
 	bool unused = false;
 	int err;
 
 	err = mlxsw_env_query_module_eeprom(mlxsw_core, module, 0, offset,
-					    unused, unused, module_info,
+					    unused, unused, 0, 0, module_info,
 					    &read_size);
 	if (err)
 		return err;
@@ -218,7 +345,7 @@ int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
 		/* Verify if transceiver provides diagnostic monitoring page */
 		err = mlxsw_env_query_module_eeprom(mlxsw_core, module,
 						    SFP_DIAGMON, 1, unused,
-						    unused, &diag_mon,
+						    unused, 0, 0, &diag_mon,
 						    &read_size);
 		if (err)
 			return err;
@@ -239,10 +366,19 @@ int mlxsw_env_get_module_info(struct mlxsw_core *mlxsw_core, int module,
 		 * memory only page 00h 0-255 bytes can be read.
 		 */
 		if (module_info[MLXSW_REG_MCIA_EEPROM_MODULE_INFO_TYPE_ID] &
-		    MLXSW_REG_MCIA_EEPROM_FLAT_MEMORY)
+		    MLXSW_REG_MCIA_EEPROM_FLAT_MEMORY) {
 			modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
-		else
-			modinfo->eeprom_len = ETH_MODULE_SFF_8636_MAX_LEN;
+		} else {
+			/* Get size of optional pages and banks. */
+			err = mlxsw_env_cmis_optional_get(mlxsw_core, module,
+							  &opt_size, NULL,
+							  NULL);
+			if (err)
+				return err;
+
+			modinfo->eeprom_len = ETH_MODULE_SFF_8472_LEN +
+					      opt_size;
+		}
 		break;
 	default:
 		return -EINVAL;
@@ -256,8 +392,9 @@ int mlxsw_env_get_module_eeprom(struct net_device *netdev,
 				struct mlxsw_core *mlxsw_core, int module,
 				struct ethtool_eeprom *ee, u8 *data)
 {
-	int offset = ee->offset;
+	u8 opt_page = 0, opt_banks = 0;
 	unsigned int read_size;
+	int offset = ee->offset;
 	bool qsfp, cmis;
 	int i = 0;
 	int err;
@@ -272,9 +409,17 @@ int mlxsw_env_get_module_eeprom(struct net_device *netdev,
 	if (err)
 		return err;
 
+	if (cmis) {
+		err = mlxsw_env_cmis_optional_get(mlxsw_core, module, NULL,
+						  &opt_page, &opt_banks);
+		if (err)
+			return err;
+	}
+
 	while (i < ee->len) {
 		err = mlxsw_env_query_module_eeprom(mlxsw_core, module, offset,
 						    ee->len - i, qsfp, cmis,
+						    opt_page, opt_banks,
 						    data + i, &read_size);
 		if (err) {
 			netdev_err(netdev, "Eeprom query failed\n");
