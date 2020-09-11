@@ -695,8 +695,7 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
 	 * adapter is not configured yet.
 	 */
 	deferred_nr = mlxreg_lc_channels[ARRAY_SIZE(mlxreg_lc_channels) - 1] +
-		      /*data->hpdev.nr;*/
-		      data->slot * 100;
+		      data->hpdev.nr;
 
 	deferred_adap = i2c_get_adapter(deferred_nr);
 	if (!deferred_adap)
