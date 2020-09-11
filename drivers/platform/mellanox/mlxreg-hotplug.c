@@ -731,7 +731,7 @@ static void mlxreg_hotplug_unset_irq(struct mlxreg_hotplug_priv_data *priv)
 		count = item->count;
 		for (j = 0; j < count; j++, data++)
 			mlxreg_hotplug_device_destroy(priv, data, item->kind,
-						      i);
+						      j);
 	}
 }
 
