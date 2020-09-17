@@ -146,9 +146,10 @@ static int mlxcpld_mux_probe(struct platform_device *pdev)
 	if (!muxc)
 		return -ENOMEM;
 
+	platform_set_drvdata(pdev, muxc);
 	data = i2c_mux_priv(muxc);
-	memcpy(&data->pdata, pdata, sizeof(*pdata));
 	data->client = client;
+	memcpy(&data->pdata, pdata, sizeof(*pdata));
 	/* Save mux select address for 16 bits transaction size. */
 	memcpy(data->sel_buf, &sel_reg_addr, 2);
 	data->last_chan = 0; /* force the first selection */
@@ -171,10 +172,10 @@ virt_reg_failed:
 
 static int mlxcpld_mux_remove(struct platform_device *pdev)
 {
-	struct i2c_client *client = to_i2c_client(pdev->dev.parent);
-	struct i2c_mux_core *muxc = i2c_get_clientdata(client);
+	struct i2c_mux_core *muxc = platform_get_drvdata(pdev);
 
 	i2c_mux_del_adapters(muxc);
+
 	return 0;
 }
 
