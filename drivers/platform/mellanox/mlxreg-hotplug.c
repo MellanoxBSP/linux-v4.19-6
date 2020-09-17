@@ -171,7 +171,9 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 
 		data->hpdev.client = client;
 		break;
-	case MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION:
+	case MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION:
+		/* Export parent regmap to underlying device. */
+		data->hpdev.brdinfo->platform_data = pdata->regmap;
 		data->hpdev.pdev =
 			platform_device_register_resndata(&priv->pdev->dev,
 							  brdinfo->type,
@@ -221,7 +223,7 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 			data->hpdev.adapter = NULL;
 		}
 		break;
-	case MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION:
+	case MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION:
 		if (data->hpdev.pdev)
 			platform_device_unregister(data->hpdev.pdev);
 		break;
@@ -230,8 +232,6 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 	}
 
 	switch (kind) {
-	case MLXREG_HOTPLUG_LC_PRESENT:
-	case MLXREG_HOTPLUG_LC_VERIFIED:
 	case MLXREG_HOTPLUG_LC_POWERED:
 	case MLXREG_HOTPLUG_LC_SYNCED:
 	case MLXREG_HOTPLUG_LC_READY:

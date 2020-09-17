@@ -50,18 +50,14 @@ enum mlxreg_hotplug_kind {
  *
  * @MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION: probe device for 'on' event, remove
  *					  for 'off' event;
- * @MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION: probe platform device for 'on'
- *						 event, notify for 'off' event;
- * @MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION: remove platform device for
- *						  'off' event, notify for 'on'
- *						   event;
+ * @MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION: probe platform device for 'on'
+ *					   event, remove for 'off' event;
  * @MLXREG_HOTPLUG_DEVICE_NO_ACTION: no connectivity action is required;
  */
 enum mlxreg_hotplug_device_action {
 	MLXREG_HOTPLUG_DEVICE_DEFAULT_ACTION = 0,
-	MLXREG_HOTPLUG_DEVICE_PLATFORM_PROBE_ACTION = 1,
-	MLXREG_HOTPLUG_DEVICE_PLATFORM_REMOVE_ACTION = 2,
-	MLXREG_HOTPLUG_DEVICE_NO_ACTION = 3,
+	MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION = 1,
+	MLXREG_HOTPLUG_DEVICE_NO_ACTION = 2,
 };
 
 /**
