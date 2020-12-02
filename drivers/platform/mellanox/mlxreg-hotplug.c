@@ -28,7 +28,7 @@
 /* ASIC good health mask. */
 #define MLXREG_HOTPLUG_GOOD_HEALTH_MASK	0x02
 
-#define MLXREG_HOTPLUG_ATTRS_MAX	64
+#define MLXREG_HOTPLUG_ATTRS_MAX	128
 #define MLXREG_HOTPLUG_NOT_ASSERT	3
 #define MLXREG_HOTPLUG_SHIFT_NR		16
 
@@ -97,13 +97,12 @@ mlxreg_hotplug_udev_event_send(struct kobject *kobj,
 }
 
 static void
-mlxreg_hotplug_pdata_export(void *pdata, void *regmap, int irq)
+mlxreg_hotplug_pdata_export(void *pdata, void *regmap)
 {
 	struct mlxreg_core_hotplug_platform_data *dev_pdata = pdata;
 
-	/* Export regmap and irq to underlying device. */
+	/* Export regmap to underlying device. */
 	dev_pdata->regmap = regmap;
-	dev_pdata->irq = irq;
 }
 
 static void
@@ -155,8 +154,7 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 
 		/* Export platform data to underlying device. */
 		if (brdinfo->platform_data)
-			mlxreg_hotplug_pdata_export(brdinfo->platform_data,
-						    pdata->regmap, priv->irq);
+			mlxreg_hotplug_pdata_export(brdinfo->platform_data, pdata->regmap);
 
 		client = i2c_new_device(data->hpdev.adapter, brdinfo);
 		if (IS_ERR(client)) {
@@ -172,14 +170,15 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 		data->hpdev.client = client;
 		break;
 	case MLXREG_HOTPLUG_DEVICE_PLATFORM_ACTION:
-		/* Export parent regmap to underlying device. */
-		data->hpdev.brdinfo->platform_data = pdata->regmap;
-		data->hpdev.pdev =
-			platform_device_register_resndata(&priv->pdev->dev,
-							  brdinfo->type,
-							  data->hpdev.nr,
-							  NULL, 0, data,
-							  sizeof(*data));
+		/* Export platform data to underlying device. */
+		if (data->hpdev.brdinfo && data->hpdev.brdinfo->platform_data)
+			mlxreg_hotplug_pdata_export(data->hpdev.brdinfo->platform_data,
+						    pdata->regmap);
+		data->hpdev.pdev = platform_device_register_resndata(&priv->pdev->dev,
+								     brdinfo->type,
+								     data->hpdev.nr,
+								     NULL, 0, data,
+								     sizeof(*data));
 		if (IS_ERR(data->hpdev.pdev))
 			return PTR_ERR(data->hpdev.pdev);
 
@@ -190,8 +189,6 @@ static int mlxreg_hotplug_device_create(struct mlxreg_hotplug_priv_data *priv,
 
 	switch (kind) {
 	case MLXREG_HOTPLUG_LC_POWERED:
-	case MLXREG_HOTPLUG_LC_SYNCED:
-	case MLXREG_HOTPLUG_LC_READY:
 		mlxreg_hotplug_notify(priv, pdata, data, kind, id, 1);
 		break;
 	default:
@@ -233,8 +230,6 @@ mlxreg_hotplug_device_destroy(struct mlxreg_hotplug_priv_data *priv,
 
 	switch (kind) {
 	case MLXREG_HOTPLUG_LC_POWERED:
-	case MLXREG_HOTPLUG_LC_SYNCED:
-	case MLXREG_HOTPLUG_LC_READY:
 		pdata = dev_get_platdata(&priv->pdev->dev);
 		mlxreg_hotplug_notify(priv, pdata, data, kind, id, 0);
 		break;

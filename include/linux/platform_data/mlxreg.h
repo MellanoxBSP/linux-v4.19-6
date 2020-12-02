@@ -1,7 +1,6 @@
-// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0
+/* SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0 */
 /*
- *
- * Copyright (C) 2016-2020 Mellanox Technologies
+ * Copyright (C) 2017-2020 Mellanox Technologies Ltd.
  */
 
 #ifndef __LINUX_PLATFORM_DATA_MLXREG_H
@@ -29,11 +28,19 @@ enum mlxreg_wdt_type {
  * enum mlxreg_hotplug_kind - kind of hotplug entry
  *
  * @MLXREG_HOTPLUG_DEVICE_NA: do not care;
- * @MLXREG_HOTPLUG_LC_PRESENT: entry for line card presence events;
- * @MLXREG_HOTPLUG_LC_VERIFIED: entry for line card verification events;
- * @MLXREG_HOTPLUG_LC_POWERED: entry for line card power events;
- * @MLXREG_HOTPLUG_LC_SYNCED: entry for line card bus synchronization events;
- * @MLXREG_HOTPLUG_LC_READY: entry for line card ready events;
+ * @MLXREG_HOTPLUG_LC_PRESENT: entry for line card presence in/out events;
+ * @MLXREG_HOTPLUG_LC_VERIFIED: entry for line card verification status events
+ *				coming after line card security signature validation;
+ * @MLXREG_HOTPLUG_LC_POWERED: entry for line card power on/off events;
+ * @MLXREG_HOTPLUG_LC_SYNCED: entry for line card synchronization events, coming
+ *			      after hardware-firmware synchronization handshake;
+ * @MLXREG_HOTPLUG_LC_READY: entry for line card ready events, indicating line card
+			     PHYs ready / unready state;
+ * @MLXREG_HOTPLUG_LC_ACTIVE: entry for line card active events, indicating firmware
+ *			      availability / unavailability for the ports on line card;
+ * @MLXREG_HOTPLUG_LC_THERMAL: entry for line card thermal shutdown events, positive
+ *			       event indicates that system should power off the line
+ *			       card for which this event has been received;
  */
 enum mlxreg_hotplug_kind {
 	MLXREG_HOTPLUG_DEVICE_NA = 0,
@@ -42,6 +49,8 @@ enum mlxreg_hotplug_kind {
 	MLXREG_HOTPLUG_LC_POWERED = 3,
 	MLXREG_HOTPLUG_LC_SYNCED = 4,
 	MLXREG_HOTPLUG_LC_READY = 5,
+	MLXREG_HOTPLUG_LC_ACTIVE = 6,
+	MLXREG_HOTPLUG_LC_THERMAL = 7,
 };
 
 /**
@@ -153,6 +162,7 @@ struct mlxreg_core_item {
  * @features: supported features of device;
  * @version: implementation version;
  * @identity: device identity name;
+ * @capability: device capability register;
  */
 struct mlxreg_core_platform_data {
 	struct mlxreg_core_data *data;
