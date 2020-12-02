@@ -228,8 +228,14 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
 			brightness = LED_OFF;
 			led_data->base_color = MLXREG_LED_GREEN_SOLID;
 		}
+
+		/*
+		 * Id greater than zero is used for LEDs located on replaceable unit,
+		 * like line card or fabric card. In this case Id is set to I2C bus
+		 * number. Otherwise LEDs located on the main board.
+		 */
 		if (priv->pdev->id > 0)
-			sprintf(led_data->led_cdev_name, "%s%d:%s", "mlxreg",
+			sprintf(led_data->led_cdev_name, "%s%d:%s", "card",
 				priv->pdev->id, data->label);
 		else
 			sprintf(led_data->led_cdev_name, "%s:%s", "mlxreg",
