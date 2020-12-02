@@ -94,7 +94,7 @@ static int mlxcpld_mux_select_chan(struct i2c_mux_core *muxc, u32 chan)
 	/* Only select the channel if its different from the last channel */
 	if (mux->last_chan != chan) {
 		err = mlxcpld_mux_reg_write(muxc->parent, mux, chan);
-		mux->last_chan = err < 0 ? -1 : chan;
+		mux->last_chan = err < 0 ? 0 : chan;
 	}
 
 	return err;
@@ -175,7 +175,6 @@ static int mlxcpld_mux_remove(struct platform_device *pdev)
 	struct i2c_mux_core *muxc = platform_get_drvdata(pdev);
 
 	i2c_mux_del_adapters(muxc);
-
 	return 0;
 }
 
