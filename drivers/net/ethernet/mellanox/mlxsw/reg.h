@@ -8951,8 +8951,8 @@ static inline void mlxsw_reg_mprs_pack(char *payload, u16 parsing_depth,
 MLXSW_REG_DEFINE(mgpir, MLXSW_REG_MGPIR_ID, MLXSW_REG_MGPIR_LEN);
 
 enum mlxsw_reg_mgpir_device_type {
-	MLXSW_REG_MGPIR_DEVICE_TYPE_NONE,
-	MLXSW_REG_MGPIR_DEVICE_TYPE_GEARBOX_DIE,
+	MLXSW_REG_MGPIR_TYPE_NONE,
+	MLXSW_REG_MGPIR_TYPE_GEARBOX_DIE,
 };
 
 /* device_type
