@@ -934,7 +934,6 @@ static int
 mlxsw_thermal_gearbox_tz_init(struct mlxsw_thermal_module *gearbox_tz)
 {
 	char tz_name[MLXSW_THERMAL_ZONE_MAX_NAME];
-	int ret;
 
 	if (gearbox_tz->slot_index)
 		snprintf(tz_name, sizeof(tz_name), "mlxsw-lc%d-gearbox%d",
@@ -1167,8 +1166,6 @@ int mlxsw_thermal_init(struct mlxsw_core *core,
 	*p_thermal = thermal;
 	return 0;
 
-err_thermal_zone_device_enable:
-	mlxsw_thermal_gearboxes_fini(thermal, thermal->main);
 err_thermal_gearboxes_init:
 	mlxsw_thermal_gearboxes_main_fini(thermal->main);
 err_thermal_gearboxes_main_init:
