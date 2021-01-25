@@ -232,10 +232,11 @@ static int mlxreg_led_config(struct mlxreg_led_priv_data *priv)
 		/*
 		 * Id greater than zero is used for LEDs located on replaceable unit,
 		 * like line card or fabric card. In this case Id is set to I2C bus
-		 * number. Otherwise LEDs located on the main board.
+		 * number. Otherwise LEDs located on the main board. The field "identity"
+		 * specifies the type of bus connecting line card to the chassis.
 		 */
 		if (priv->pdev->id > 0)
-			sprintf(led_data->led_cdev_name, "%s%d:%s", "card",
+			sprintf(led_data->led_cdev_name, "%scard%d:%s", led_pdata->identity,
 				priv->pdev->id, data->label);
 		else
 			sprintf(led_data->led_cdev_name, "%s:%s", "mlxreg",

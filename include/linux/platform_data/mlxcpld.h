@@ -13,17 +13,21 @@
 /* mlxcpld_mux_plat_data - per mux data, used with i2c_register_board_info
  * @base_nr: base I2C bus number to number adapters from or zero for setting
  *	     to adap_ids vector
- * @adap_ids - adapter array
+ * @chan_ids - channels array
  * @num_adaps - number of adapters
  * @sel_reg_addr - mux select register offset in CPLD space
- * @reg_size: register size in bytes (default 0 - 1 byte data, 1 - 2 bytes data
+ * @reg_size: register size in bytes
+ * @handle: handle to be passed by callback
+ * @completion_notify: callback to notify when all the adapters are created
  */
 struct mlxcpld_mux_plat_data {
 	int base_nr;
-	int *adap_ids;
+	int *chan_ids;
 	int num_adaps;
 	int sel_reg_addr;
 	u8 reg_size;
+	void *handle;
+	int (*completion_notify)(void *handle, struct i2c_adapter *parent, struct i2c_adapter *adapters[]);
 };
 
 #endif /* _LINUX_I2C_MLXCPLD_H */

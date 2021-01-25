@@ -19,13 +19,13 @@
  * @last_chan - last register value
  * @client - I2C device client
  * @pdata: platform data
- * @sel_buf: I2C message buffer for mux select 16 bits transactions
+ * @sel_reg_addr: mux select/deselect register address
  */
 struct mlxcpld_mux {
 	int last_chan;
 	struct i2c_client *client;
 	struct mlxcpld_mux_plat_data pdata;
-	u8 sel_buf[3];
+	__be16 sel_reg_addr;
 };
 
 /* MUX logic description.
@@ -65,19 +65,19 @@ static int mlxcpld_mux_reg_write(struct i2c_adapter *adap,
 	struct i2c_client *client = mux->client;
 	union i2c_smbus_data data;
 	struct i2c_msg msg;
+	u8 buf[3];
 
 	switch (mux->pdata.reg_size) {
 	case 1:
 		data.byte = (chan < 0) ? 0 : chan;
 		return __i2c_smbus_xfer(adap, client->addr, client->flags,
-					I2C_SMBUS_WRITE,
-					mux->pdata.sel_reg_addr,
+					I2C_SMBUS_WRITE, mux->pdata.sel_reg_addr,
 					I2C_SMBUS_BYTE_DATA, &data);
 	case 2:
-		mux->sel_buf[mux->pdata.reg_size] = (chan < 0) ? 0 :
-						    mux->pdata.adap_ids[chan];
+		memcpy(buf, &mux->sel_reg_addr, 2);
+		buf[2] = chan;
 		msg.addr = client->addr;
-		msg.buf = mux->sel_buf;
+		msg.buf = buf;
 		msg.len = mux->pdata.reg_size + 1;
 		msg.flags = 0;
 		return __i2c_transfer(adap, &msg, 1);
@@ -89,12 +89,16 @@ static int mlxcpld_mux_reg_write(struct i2c_adapter *adap,
 static int mlxcpld_mux_select_chan(struct i2c_mux_core *muxc, u32 chan)
 {
 	struct mlxcpld_mux *mux = i2c_mux_priv(muxc);
+	u8 regval = chan;
 	int err = 0;
+
+	if (mux->pdata.reg_size == 1)
+		regval += 1;
 
 	/* Only select the channel if its different from the last channel */
 	if (mux->last_chan != chan) {
-		err = mlxcpld_mux_reg_write(muxc->parent, mux, chan);
-		mux->last_chan = err < 0 ? 0 : chan;
+		err = mlxcpld_mux_reg_write(muxc->parent, mux, regval);
+		mux->last_chan = err < 0 ? 0 : regval;
 	}
 
 	return err;
@@ -105,7 +109,7 @@ static int mlxcpld_mux_deselect(struct i2c_mux_core *muxc, u32 chan)
 	struct mlxcpld_mux *mux = i2c_mux_priv(muxc);
 
 	/* Deselect active channel */
-	mux->last_chan = -1;
+	mux->last_chan = 0;
 
 	return mlxcpld_mux_reg_write(muxc->parent, mux, mux->last_chan);
 }
@@ -116,11 +120,9 @@ static int mlxcpld_mux_probe(struct platform_device *pdev)
 	struct mlxcpld_mux_plat_data *pdata = dev_get_platdata(&pdev->dev);
 	struct i2c_client *client = to_i2c_client(pdev->dev.parent);
 	struct i2c_mux_core *muxc;
-	int num, force;
 	struct mlxcpld_mux *data;
-	u16 sel_reg_addr = 0;
+	int num, err;
 	u32 func;
-	int err;
 
 	if (!pdata)
 		return -EINVAL;
@@ -130,8 +132,7 @@ static int mlxcpld_mux_probe(struct platform_device *pdev)
 		func = I2C_FUNC_SMBUS_WRITE_BYTE_DATA;
 		break;
 	case 2:
-		func = I2C_FUNC_SMBUS_WRITE_WORD_DATA;
-		sel_reg_addr = cpu_to_be16(pdata->sel_reg_addr);
+		func = I2C_FUNC_I2C;
 		break;
 	default:
 		return -EINVAL;
@@ -151,17 +152,20 @@ static int mlxcpld_mux_probe(struct platform_device *pdev)
 	data->client = client;
 	memcpy(&data->pdata, pdata, sizeof(*pdata));
 	/* Save mux select address for 16 bits transaction size. */
-	memcpy(data->sel_buf, &sel_reg_addr, 2);
+	data->sel_reg_addr = cpu_to_be16(pdata->sel_reg_addr);
 	data->last_chan = 0; /* force the first selection */
 
 	/* Create an adapter for each channel. */
 	for (num = 0; num < pdata->num_adaps; num++) {
-		force = pdata->base_nr ? (pdata->base_nr +
-			pdata->adap_ids[num]) : pdata->adap_ids[num];
-		err = i2c_mux_add_adapter(muxc, force, num, 0);
+		err = i2c_mux_add_adapter(muxc, pdata->base_nr + num,
+					  pdata->chan_ids[num], 0);
 		if (err)
 			goto virt_reg_failed;
 	}
+
+	/* Notify caller when all channels' adapters are created. */
+	if (pdata->completion_notify)
+		pdata->completion_notify(pdata->handle, muxc->parent, muxc->adapter);
 
 	return 0;
 

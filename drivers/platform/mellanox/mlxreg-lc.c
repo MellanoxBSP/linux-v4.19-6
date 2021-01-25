@@ -31,12 +31,11 @@
 
 #define MLXREG_LC_BASE_NR		100
 #define MLXREG_LC_SET_BASE_NR(slot)	(MLXREG_LC_BASE_NR * (slot))
-#define MLXREG_LC_DEFER_TIME		(msecs_to_jiffies(10))
 
 /**
  * enum mlxreg_lc_type - line cards types
  *
- * MLXREG_LC_SN4800_C16 - 100GbE line card with 16 QSFP28 ports;
+ * @MLXREG_LC_SN4800_C16: 100GbE line card with 16 QSFP28 ports;
  */
 enum mlxreg_lc_type {
 	MLXREG_LC_SN4800_C16 = 0x0000,
@@ -44,25 +43,27 @@ enum mlxreg_lc_type {
 
 /* mlxreg_lc - device private data
  * @list: list of line card objects;
- * @dev - platform device;
- * io_data - register access platform data;
- * led_data - LED platform data ;
- * @mux_data - MUX platform data;
- * @led - LED device;
- * @io_regs - register access device;
- * @mux_brdinfo - mux configuration;
- * @mux - mux devices;
- * @aux_devs - I2C devices feeding by auxiliary power;
- * @aux_devs_num - number of I2C devices feeding by auxiliary power;
- * @main_devs - I2C devices feeding by main power;
- * @main_devs_num - number of I2C devices feeding by main power;
- * @defer_nr - highest number of I2C adapter, created by mux driver – until it
- *	       is not created, devices can not be connected;
- * @topo_id - topology Id of line card;
+ * @dev: platform device;
+ * @par_regmap: parent device regmap handle;
+ * @data: pltaform core data;
+ * @io_data: register access platform data;
+ * @led_data: LED platform data ;
+ * @mux_data: MUX platform data;
+ * @led: LED device;
+ * @io_regs: register access device;
+ * @mux_brdinfo: mux configuration;
+ * @mux: mux devices;
+ * @aux_devs: I2C devices feeding by auxiliary power;
+ * @aux_devs_num: number of I2C devices feeding by auxiliary power;
+ * @main_devs: I2C devices feeding by main power;
+ * @main_devs_num: number of I2C devices feeding by main power;
+ * @topo_id: topology Id of line card;
  */
 struct mlxreg_lc {
 	struct list_head list;
 	struct device *dev;
+	void *par_regmap;
+	struct mlxreg_core_data *data;
 	struct mlxreg_core_platform_data *io_data;
 	struct mlxreg_core_platform_data *led_data;
 	struct mlxcpld_mux_plat_data *mux_data;
@@ -72,11 +73,8 @@ struct mlxreg_lc {
 	struct platform_device *mux;
 	struct mlxreg_hotplug_device *aux_devs;
 	int aux_devs_num;
-	struct delayed_work dwork_aux;
 	struct mlxreg_hotplug_device *main_devs;
 	int main_devs_num;
-	int defer_nr;
-	struct delayed_work dwork_main;
 	int topo_id;
 };
 
@@ -167,7 +165,7 @@ static int mlxreg_lc_chan[] = {
 /* Defaul mux configuration. */
 static struct mlxcpld_mux_plat_data mlxreg_lc_mux_data[] = {
 	{
-		.adap_ids = mlxreg_lc_chan,
+		.chan_ids = mlxreg_lc_chan,
 		.num_adaps = ARRAY_SIZE(mlxreg_lc_chan),
 		.sel_reg_addr = MLXREG_LC_CHANNEL_I2C_REG,
 		.reg_size = 2,
@@ -193,11 +191,11 @@ static struct i2c_board_info mlxreg_lc_aux_pwr_devices[] = {
 static struct mlxreg_hotplug_device mlxreg_lc_aux_pwr_brdinfo[] = {
 	{
 		.brdinfo = &mlxreg_lc_aux_pwr_devices[0],
-		.nr = 7,
+		.nr = 3,
 	},
 	{
 		.brdinfo = &mlxreg_lc_aux_pwr_devices[1],
-		.nr = 8,
+		.nr = 4,
 	},
 };
 
@@ -221,19 +219,19 @@ static struct i2c_board_info mlxreg_lc_main_pwr_devices[] = {
 static struct mlxreg_hotplug_device mlxreg_lc_main_pwr_brdinfo[] = {
 	{
 		.brdinfo = &mlxreg_lc_main_pwr_devices[0],
-		.nr = 4,
+		.nr = 0,
 	},
 	{
 		.brdinfo = &mlxreg_lc_main_pwr_devices[1],
-		.nr = 4,
+		.nr = 0,
 	},
 	{
 		.brdinfo = &mlxreg_lc_main_pwr_devices[2],
-		.nr = 5,
+		.nr = 1,
 	},
 	{
 		.brdinfo = &mlxreg_lc_main_pwr_devices[3],
-		.nr = 6,
+		.nr = 2,
 	},
 };
 
@@ -252,6 +250,7 @@ static struct mlxreg_core_data mlxreg_lc_led_data[] = {
 };
 
 static struct mlxreg_core_platform_data mlxreg_lc_led = {
+	.identity = "pci",
 	.data = mlxreg_lc_led_data,
 	.counter = ARRAY_SIZE(mlxreg_lc_led_data),
 };
@@ -410,18 +409,11 @@ mlxreg_lc_create_static_devices(struct mlxreg_lc *mlxreg_lc, struct mlxreg_hotpl
 
 	/* Create static I2C device feeding by auxiliary power. */
 	for (i = 0; i < size; i++, dev++) {
-		dev->adapter = i2c_get_adapter(dev->nr);
-		if (!dev->adapter) {
-			dev_err(mlxreg_lc->dev, "Failed to get adapter for bus %d\n",
-				dev->nr);
-			goto fail_create_static_devices;
-		}
 		dev->client = i2c_new_device(dev->adapter, dev->brdinfo);
 		if (IS_ERR(dev->client)) {
 			dev_err(mlxreg_lc->dev, "Failed to create client %s at bus %d at addr 0x%02x\n",
 				dev->brdinfo->type, dev->nr, dev->brdinfo->addr);
 
-			i2c_put_adapter(dev->adapter);
 			dev->adapter = NULL;
 			goto fail_create_static_devices;
 		}
@@ -434,7 +426,6 @@ fail_create_static_devices:
 		dev = devs + i;
 		i2c_unregister_device(dev->client);
 		dev->client = NULL;
-		i2c_put_adapter(dev->adapter);
 		dev->adapter = NULL;
 	}
 	return IS_ERR(dev->client);
@@ -452,9 +443,6 @@ mlxreg_lc_destroy_static_devices(struct mlxreg_lc *mlxreg_lc, struct mlxreg_hotp
 		if (dev->client) {
 			i2c_unregister_device(dev->client);
 			dev->client = NULL;
-		}
-		if (dev->adapter) {
-			i2c_put_adapter(dev->adapter);
 			dev->adapter = NULL;
 		}
 	}
@@ -527,7 +515,7 @@ mlxreg_lc_event(struct notifier_block *unused, unsigned long event, void *data)
 }
 
 /* Notifier block structure. */
-struct notifier_block mlxreg_lc_notifier_block = {
+static struct notifier_block mlxreg_lc_notifier_block = {
 	.notifier_call = mlxreg_lc_event,
 };
 
@@ -536,9 +524,6 @@ mlxreg_lc_sn4800_c16_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
 				 struct mlxreg_core_data *data)
 {
 	struct device *dev = &data->hpdev.client->dev;
-	struct mlxreg_hotplug_device *main_dev;
-	struct mlxreg_hotplug_device *aux_dev;
-	int i;
 
 	/* Set line card configuration according to the type. */
 	mlxreg_lc->mux_data = mlxreg_lc_mux_data;
@@ -551,30 +536,52 @@ mlxreg_lc_sn4800_c16_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
 	if (!mlxreg_lc->aux_devs)
 		return -ENOMEM;
 	mlxreg_lc->aux_devs_num = ARRAY_SIZE(mlxreg_lc_aux_pwr_brdinfo);
-
-	/*
-	 * Update busses for I2C device feeding by auxiliary power according to
-	 * the number of slot at which line card is located.
-	 */
-	aux_dev = mlxreg_lc->aux_devs;
-	for (i = 0; i <= mlxreg_lc->aux_devs_num; i++, aux_dev++)
-		aux_dev->nr += MLXREG_LC_SET_BASE_NR(data->slot);
-
 	mlxreg_lc->main_devs = devm_kmemdup(dev, mlxreg_lc_main_pwr_brdinfo,
 					    sizeof(mlxreg_lc_main_pwr_brdinfo), GFP_KERNEL);
 	if (!mlxreg_lc->main_devs)
 		return -ENOMEM;
 	mlxreg_lc->main_devs_num = ARRAY_SIZE(mlxreg_lc_main_pwr_brdinfo);
 
-	/*
-	 * Update busses for I2C device feeding by main power according to the
-	 * number of slot at which line card is located.
-	 */
+	return 0;
+}
+
+static int mlxreg_lc_completion_notify(void *handle, struct i2c_adapter *parent, struct i2c_adapter *adapters[])
+{
+	struct mlxreg_hotplug_device *main_dev, *aux_dev;
+	struct mlxreg_lc *mlxreg_lc = handle;
+	u32 regval;
+	int i, err;
+
+	/* Update I2C devices feeding by auxiliary power. */
+	aux_dev = mlxreg_lc->aux_devs;
+	for (i = 0; i < mlxreg_lc->aux_devs_num; i++, aux_dev++) {
+		aux_dev->adapter = adapters[aux_dev->nr];
+		aux_dev->nr = adapters[aux_dev->nr]->nr;
+	}
+
+	err = mlxreg_lc_create_static_devices(mlxreg_lc, mlxreg_lc->aux_devs,
+					      mlxreg_lc->aux_devs_num);
+
+	/* Update I2C devices feeding by main power. */
 	main_dev = mlxreg_lc->main_devs;
-	for (i = 0; i <= mlxreg_lc->main_devs_num; i++, main_dev++)
-		main_dev->nr += MLXREG_LC_SET_BASE_NR(data->slot);
+	for (i = 0; i < mlxreg_lc->main_devs_num; i++, main_dev++) {
+		main_dev->adapter = adapters[main_dev->nr];
+		main_dev->nr = adapters[main_dev->nr]->nr;
+	}
+
+	err = regmap_read(mlxreg_lc->par_regmap, mlxreg_lc->data->reg_prsnt, &regval);
+	if (err)
+		goto mlxreg_lc_completion_notify_fail;
+
+	/* bring-up */ regval = ~regval;
+	if (regval & mlxreg_lc->data->mask)
+		err = mlxreg_lc_create_static_devices(mlxreg_lc, mlxreg_lc->main_devs,
+						      mlxreg_lc->main_devs_num);
 
 	return 0;
+
+mlxreg_lc_completion_notify_fail:
+	return err;
 }
 
 static int
@@ -582,7 +589,8 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
 		      struct mlxreg_core_data *data)
 {
 	struct device *dev = &data->hpdev.client->dev;
-	int lsb, regval, err;
+	int lsb, err;
+	u32 regval;
 
 	/* Validate line card type. */
 	err = regmap_read(regmap, MLXREG_LC_REG_CONFIG_OFFSET, &lsb);
@@ -602,6 +610,8 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
 
 	/* Create mux infrastructure. */
 	mlxreg_lc->mux_data->base_nr = MLXREG_LC_SET_BASE_NR(data->slot);
+	mlxreg_lc->mux_data->handle = mlxreg_lc;
+	mlxreg_lc->mux_data->completion_notify = mlxreg_lc_completion_notify;
 	mlxreg_lc->mux_brdinfo->platform_data = mlxreg_lc->mux_data;
 	mlxreg_lc->mux = platform_device_register_resndata(dev, "i2c-mux-mlxcpld", data->hpdev.nr,
 							   NULL, 0, mlxreg_lc->mux_data,
@@ -659,63 +669,13 @@ static void mlxreg_lc_config_exit(struct mlxreg_lc *mlxreg_lc)
 		platform_device_unregister(mlxreg_lc->mux);
 }
 
-static void
-mlxreg_lc_work(struct mlxreg_lc *mlxreg_lc, struct delayed_work *dwork,
-	       int defer_nr, struct mlxreg_hotplug_device *devs, int devs_num,
-	       bool *finished)
-{
-	struct i2c_adapter *adap;
-
-	adap = i2c_get_adapter(defer_nr);
-	if (!adap) {
-		i2c_put_adapter(adap);
-		cancel_delayed_work(dwork);
-		schedule_delayed_work(dwork, MLXREG_LC_DEFER_TIME);
-		return;
-	}
-	i2c_put_adapter(adap);
-	cancel_delayed_work(dwork);
-	if (finished)
-		*finished = true;
-	mlxreg_lc_create_static_devices(mlxreg_lc, devs, devs_num);
-}
-
-static void mlxreg_lc_work_main(struct work_struct *work)
-{
-	struct mlxreg_lc *mlxreg_lc;
-
-	mlxreg_lc = container_of(work, struct mlxreg_lc, dwork_main.work);
-	mlxreg_lc_work(mlxreg_lc, &mlxreg_lc->dwork_main, mlxreg_lc->defer_nr,
-		       mlxreg_lc->main_devs, mlxreg_lc->main_devs_num, NULL);
-}
-
-static void mlxreg_lc_work_aux(struct work_struct *work)
-{
-	struct mlxreg_lc *mlxreg_lc;
-	bool finished = false;
-
-	mlxreg_lc = container_of(work, struct mlxreg_lc, dwork_aux.work);
-	mlxreg_lc_work(mlxreg_lc, &mlxreg_lc->dwork_aux, mlxreg_lc->defer_nr,
-		       mlxreg_lc->aux_devs, mlxreg_lc->aux_devs_num, &finished);
-	if (!finished)
-		return;
-	/* Register notifier only when the first device is probed. */
-	mutex_lock(&mlxreg_lc_mutex);
-
-	if (list_empty(&mlxreg_lc_list))
-		mlxplat_blk_notifier_register(&mlxreg_lc_notifier_block);
-	list_add(&mlxreg_lc->list, &mlxreg_lc_list);
-
-	mutex_unlock(&mlxreg_lc_mutex);
-}
-
 static int mlxreg_lc_probe(struct platform_device *pdev)
 {
 	struct mlxreg_core_hotplug_platform_data *par_pdata;
 	struct mlxreg_core_data *data;
 	struct mlxreg_lc *mlxreg_lc;
-	void *regmap, *par_regmap;
-	int regval, i, err;
+	void *regmap;
+	int i, err;
 
 	data = dev_get_platdata(&pdev->dev);
 	if (!data)
@@ -765,38 +725,25 @@ static int mlxreg_lc_probe(struct platform_device *pdev)
 	if (err)
 		goto mlxreg_lc_probe_fail;
 
+	par_pdata = data->hpdev.brdinfo->platform_data;
+	mlxreg_lc->par_regmap = par_pdata->regmap;
+	mlxreg_lc->data = data;
+	mlxreg_lc->topo_id = rol32(data->hpdev.nr, 16) | data->hpdev.brdinfo->addr;
+	platform_set_drvdata(pdev, mlxreg_lc);
+
 	/* Configure line card. */
 	err = mlxreg_lc_config_init(mlxreg_lc, regmap, data);
 	if (err)
 		goto mlxreg_lc_probe_fail;
 
-	/*
-	 * Set line card higher adapter number. Defer probing if the higher
-	 * adapter is not configured yet.
-	 */
-	mlxreg_lc->defer_nr = mlxreg_lc_chan[ARRAY_SIZE(mlxreg_lc_chan) - 1] + data->slot * 100;
-	mlxreg_lc->topo_id = rol32(data->hpdev.nr, 16) | data->hpdev.brdinfo->addr;
-	platform_set_drvdata(pdev, mlxreg_lc);
+	/* Register notifier only when the first device is probed. */
+	mutex_lock(&mlxreg_lc_mutex);
 
-	/*
-	 * Initialize delayed work queues for handling attachment of line card
-	 * on-board devices. These devices can not be attached immediately, but
-	 * only when deferred adapter is getting available.
-	 */
-	INIT_DELAYED_WORK(&mlxreg_lc->dwork_aux, mlxreg_lc_work_aux);
-	schedule_delayed_work(&mlxreg_lc->dwork_aux, MLXREG_LC_DEFER_TIME);
+	if (list_empty(&mlxreg_lc_list))
+		mlxplat_blk_notifier_register(&mlxreg_lc_notifier_block);
+	list_add(&mlxreg_lc->list, &mlxreg_lc_list);
 
-	par_pdata = data->hpdev.brdinfo->platform_data;
-	par_regmap = par_pdata->regmap;
-	err = regmap_read(par_regmap, data->reg_prsnt, &regval);
-	if (err)
-		goto mlxreg_lc_probe_fail;
-
-	/* bring-up */ regval = ~regval;
-	if (regval & data->mask) {
-		INIT_DELAYED_WORK(&mlxreg_lc->dwork_main, mlxreg_lc_work_main);
-		schedule_delayed_work(&mlxreg_lc->dwork_main, MLXREG_LC_DEFER_TIME);
-	}
+	mutex_unlock(&mlxreg_lc_mutex);
 
 	return err;
 

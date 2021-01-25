@@ -117,9 +117,9 @@ mlxreg_hotplug_notify(struct mlxreg_hotplug_priv_data *priv,
 	info.slot = id;
 	info.action = act;
 	strncpy(info.label, data->label, sizeof(data->label));
-	info.topo_id = rol32(data->hpdev.nr + pdata->shift_nr,
-			     MLXREG_HOTPLUG_SHIFT_NR) |
-			     data->hpdev.brdinfo->addr;
+	info.topo_id = rol32(data->hpdev.nr + pdata->shift_nr, MLXREG_HOTPLUG_SHIFT_NR);
+	if (data->hpdev.brdinfo)
+		info.topo_id |= data->hpdev.brdinfo->addr;
 	mlxplat_blk_notifiers_call_chain(kind, &info);
 }
 
@@ -380,8 +380,7 @@ mlxreg_hotplug_work_helper(struct mlxreg_hotplug_priv_data *priv,
 	 * signals from other devices if any.
 	 */
 	if (unlikely(!item)) {
-		dev_err(priv->dev, "False signal: at offset:mask 0x%02x:0x%02x.\n",
-			item->reg, item->mask);
+		dev_err(priv->dev, "False signal");
 
 		return;
 	}
