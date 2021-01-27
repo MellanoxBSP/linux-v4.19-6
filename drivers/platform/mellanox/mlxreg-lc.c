@@ -29,9 +29,6 @@
 #define MLXREG_LC_REG_CONFIG_OFFSET		0x25fb
 #define MLXREG_LC_REG_MAX			0x2600
 
-#define MLXREG_LC_BASE_NR		100
-#define MLXREG_LC_SET_BASE_NR(slot)	(MLXREG_LC_BASE_NR * (slot))
-
 /**
  * enum mlxreg_lc_type - line cards types
  *
@@ -609,7 +606,6 @@ mlxreg_lc_config_init(struct mlxreg_lc *mlxreg_lc, void *regmap,
 	}
 
 	/* Create mux infrastructure. */
-	mlxreg_lc->mux_data->base_nr = MLXREG_LC_SET_BASE_NR(data->slot);
 	mlxreg_lc->mux_data->handle = mlxreg_lc;
 	mlxreg_lc->mux_data->completion_notify = mlxreg_lc_completion_notify;
 	mlxreg_lc->mux_brdinfo->platform_data = mlxreg_lc->mux_data;
