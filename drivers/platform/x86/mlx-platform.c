@@ -3077,6 +3077,12 @@ static const struct dmi_system_id mlxplat_dmi_table[] __initconst = {
 		},
 	},
 	{
+		.callback = mlxplat_dmi_ng400_matched,
+		.matches = {
+			DMI_MATCH(DMI_BOARD_NAME, "VMOD0012"),
+		},
+	},
+	{
 		.callback = mlxplat_dmi_msn274x_matched,
 		.matches = {
 			DMI_MATCH(DMI_BOARD_VENDOR, "Mellanox Technologies"),
